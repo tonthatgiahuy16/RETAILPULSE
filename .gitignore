@@ -3,7 +3,9 @@ data/raw/
 data/interim/
 data/processed/
 .env
+AGENTS.md
 __pycache__/
 *.py[cod]
+*.egg-info/
 .venv/
 .test-tmp/
