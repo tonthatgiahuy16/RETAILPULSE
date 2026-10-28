@@ -1,0 +1,9 @@
+# Data snapshots and local secrets must never be committed.
+data/raw/
+data/interim/
+data/processed/
+.env
+__pycache__/
+*.py[cod]
+.venv/
+.test-tmp/
