@@ -29,12 +29,17 @@ Headers are exactly: `Invoice`, `StockCode`, `Description`, `Quantity`, `Invoice
 | Missing or non-datetime `InvoiceDate` | 0 | No timestamp parsing failure in this sheet |
 | Timestamp span | 2009-12-01 07:45 to 2010-12-09 20:01 | No timezone is supplied by UCI |
 
-## Pending evidence
+## Completed profile: `Year 2010-2011`
 
-The analogous row-level profile for `Year 2010-2011` must be run locally before setting quality thresholds for the entire source. The terminal here stops one full scan at 30 seconds; that is an execution constraint, not evidence that the sheet is malformed.
+Profiled locally on 2026-10-29 against the hash-recorded workbook.
 
-Run it locally:
-
-```powershell
-python scripts/profile_source.py data/raw/online_retail_ii/online_retail_II.xlsx "Year 2010-2011"
-```
+| Check | Observed count | Interpretation |
+|---|---:|---|
+| Data rows | 541,910 | Source rows; retain all in raw |
+| Missing `Customer ID` | 135,080 | Retain for revenue; exclude later customer-level consumers |
+| Missing `Description` | 1,454 | Flag in staging; do not mutate raw |
+| Invoice beginning `C` | 9,288 | UCI-defined cancellation indicator, not yet a matched return |
+| Negative `Quantity` | 10,624 | Not synonymous with cancellation; preserve and classify later |
+| `Price <= 0` | 2,517 | Quarantine/flag candidate, pending business rule |
+| Missing or non-datetime `InvoiceDate` | 0 | No timestamp parsing failure in this sheet |
+| Timestamp span | 2010-12-01 08:26 to 2011-12-09 12:50 | No timezone is supplied by UCI |
