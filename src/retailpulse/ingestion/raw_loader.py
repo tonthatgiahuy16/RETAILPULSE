@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 from openpyxl import load_workbook
 
-from retailpulse.ingestion.source_snapshot import SourceSnapshot, describe_snapshot
+from retailpulse.ingestion.source_snapshot import SourceSnapshot, materialized_snapshot
 
 
 EXPECTED_HEADERS = (
@@ -219,105 +219,105 @@ def ingest_workbook(
         if source_retrieved_at.tzinfo is None:
             raise ValueError("source_retrieved_at must include a timezone")
 
-        snapshot: SourceSnapshot = describe_snapshot(workbook_path, source_uri=source_uri)
-        validate_workbook_contract(workbook_path)
+        with materialized_snapshot(workbook_path, source_uri=source_uri) as snapshot:
+            validate_workbook_contract(snapshot.local_path)
 
-        with _cursor(connection) as cursor:
-            _advisory_lock(cursor, snapshot.sha256_hex)
-            cursor.execute(
-                """
-                select source_file_id, expected_row_count
-                from ops.source_file
-                where sha256 = %s
-                """,
-                (snapshot.sha256_hex,),
-            )
-            existing = cursor.fetchone()
+            with _cursor(connection) as cursor:
+                _advisory_lock(cursor, snapshot.sha256_hex)
+                cursor.execute(
+                    """
+                    select source_file_id, expected_row_count
+                    from ops.source_file
+                    where sha256 = %s
+                    """,
+                    (snapshot.sha256_hex,),
+                )
+                existing = cursor.fetchone()
 
-            if existing is not None:
-                source_file_id, expected_row_count = int(existing[0]), int(existing[1])
+                if existing is not None:
+                    source_file_id, expected_row_count = int(existing[0]), int(existing[1])
+                    cursor.execute(
+                        "select count(*) from raw.online_retail_line where source_file_id = %s",
+                        (source_file_id,),
+                    )
+                    raw_row_count = int(cursor.fetchone()[0])
+                    if raw_row_count != expected_row_count:
+                        raise ReconciliationError(
+                            f"Existing source_file_id {source_file_id} records {expected_row_count} "
+                            f"rows but raw contains {raw_row_count}"
+                        )
+                    cursor.execute(
+                        """
+                        update ops.ingestion_batch
+                        set source_file_id = %s,
+                            status = 'SKIPPED_ALREADY_LOADED',
+                            completed_at = now(),
+                            committed_row_count = 0
+                        where batch_id = %s
+                        """,
+                        (source_file_id, batch_id),
+                    )
+                    connection.commit()
+                    return IngestionResult(
+                        batch_id=batch_id,
+                        status="SKIPPED_ALREADY_LOADED",
+                        source_file_id=source_file_id,
+                        source_row_count=expected_row_count,
+                        committed_raw_row_count=raw_row_count,
+                    )
+
+                cursor.execute(
+                    """
+                    insert into ops.source_file (
+                        sha256, source_uri, original_filename, byte_size,
+                        source_retrieved_at, expected_row_count
+                    ) values (%s, %s, %s, %s, %s, %s)
+                    returning source_file_id
+                    """,
+                    (
+                        snapshot.sha256_hex,
+                        snapshot.source_uri,
+                        snapshot.original_filename,
+                        snapshot.byte_size,
+                        source_retrieved_at.astimezone(UTC),
+                        0,
+                    ),
+                )
+                source_file_id = int(cursor.fetchone()[0])
+                source_row_count = _stream_raw_rows(
+                    cursor,
+                    snapshot.local_path,
+                    source_file_id=source_file_id,
+                    batch_id=batch_id,
+                )
                 cursor.execute(
                     "select count(*) from raw.online_retail_line where source_file_id = %s",
                     (source_file_id,),
                 )
-                raw_row_count = int(cursor.fetchone()[0])
-                if raw_row_count != expected_row_count:
+                committed_raw_row_count = int(cursor.fetchone()[0])
+                if committed_raw_row_count != source_row_count:
                     raise ReconciliationError(
-                        f"Existing source_file_id {source_file_id} records {expected_row_count} "
-                        f"rows but raw contains {raw_row_count}"
+                        f"Source contains {source_row_count} rows but raw has {committed_raw_row_count}"
                     )
+                cursor.execute(
+                    """
+                    update ops.source_file
+                    set expected_row_count = %s
+                    where source_file_id = %s
+                    """,
+                    (source_row_count, source_file_id),
+                )
                 cursor.execute(
                     """
                     update ops.ingestion_batch
                     set source_file_id = %s,
-                        status = 'SKIPPED_ALREADY_LOADED',
+                        status = 'SUCCEEDED',
                         completed_at = now(),
-                        committed_row_count = 0
+                        committed_row_count = %s
                     where batch_id = %s
                     """,
-                    (source_file_id, batch_id),
+                    (source_file_id, committed_raw_row_count, batch_id),
                 )
-                connection.commit()
-                return IngestionResult(
-                    batch_id=batch_id,
-                    status="SKIPPED_ALREADY_LOADED",
-                    source_file_id=source_file_id,
-                    source_row_count=expected_row_count,
-                    committed_raw_row_count=raw_row_count,
-                )
-
-            cursor.execute(
-                """
-                insert into ops.source_file (
-                    sha256, source_uri, original_filename, byte_size,
-                    source_retrieved_at, expected_row_count
-                ) values (%s, %s, %s, %s, %s, %s)
-                returning source_file_id
-                """,
-                (
-                    snapshot.sha256_hex,
-                    snapshot.source_uri,
-                    snapshot.original_filename,
-                    snapshot.byte_size,
-                    source_retrieved_at.astimezone(UTC),
-                    0,
-                ),
-            )
-            source_file_id = int(cursor.fetchone()[0])
-            source_row_count = _stream_raw_rows(
-                cursor,
-                workbook_path,
-                source_file_id=source_file_id,
-                batch_id=batch_id,
-            )
-            cursor.execute(
-                "select count(*) from raw.online_retail_line where source_file_id = %s",
-                (source_file_id,),
-            )
-            committed_raw_row_count = int(cursor.fetchone()[0])
-            if committed_raw_row_count != source_row_count:
-                raise ReconciliationError(
-                    f"Source contains {source_row_count} rows but raw has {committed_raw_row_count}"
-                )
-            cursor.execute(
-                """
-                update ops.source_file
-                set expected_row_count = %s
-                where source_file_id = %s
-                """,
-                (source_row_count, source_file_id),
-            )
-            cursor.execute(
-                """
-                update ops.ingestion_batch
-                set source_file_id = %s,
-                    status = 'SUCCEEDED',
-                    completed_at = now(),
-                    committed_row_count = %s
-                where batch_id = %s
-                """,
-                (source_file_id, committed_raw_row_count, batch_id),
-            )
         connection.commit()
         return IngestionResult(
             batch_id=batch_id,

@@ -25,21 +25,25 @@ $env:PYTHONPATH = 'src'
 python -m unittest discover -s tests -v
 ```
 
-## Run Slice 1 against PostgreSQL
+## Run migrations, ingestion, and publish gates
 
 Set `DATABASE_URL` outside the repository, then run the migration and one ingestion attempt. `--source-retrieved-at` is the actual retrieval time of this local snapshot and must include its timezone.
 
 ```powershell
 $env:PYTHONPATH = 'src'
 $env:DATABASE_URL = 'postgresql://...'
-python scripts/ingest_raw.py data/raw/online_retail_ii/online_retail_II.xlsx `
+python scripts/run_pipeline.py `
+  --workbook data/raw/online_retail_ii/online_retail_II.xlsx `
   --source-uri 'https://archive.ics.uci.edu/dataset/502/online+retail+ii' `
-  --source-retrieved-at '<actual-retrieval-time-with-timezone>' `
-  --apply-migration
+  --source-retrieved-at '<actual-retrieval-time-with-timezone>'
 ```
 
-The loader streams rows, records each attempt in `ops.ingestion_batch`, serializes same-hash attempts with a PostgreSQL advisory lock, and inserts the source manifest, raw rows, and `SUCCEEDED` state in one transaction. A repeat of the same SHA-256 creates a `SKIPPED_ALREADY_LOADED` audit batch and no new raw rows. The command output is evidence for one run only; inspect the reported count and database reconciliation before treating the raw snapshot as published.
+The runner records each applied migration and its SHA-256 in `ops.schema_migration`, refuses migration drift, then runs SQL publish gates after ingestion. The loader first materializes a private copy of the workbook and hashes that exact copy; it serializes same-hash attempts with a PostgreSQL advisory lock, then inserts the source manifest, raw rows, and `SUCCEEDED` state in one transaction. A repeat of the same SHA-256 creates a `SKIPPED_ALREADY_LOADED` audit batch and no new raw rows. The command output is evidence for one run only; inspect the reported count and database reconciliation before treating the raw snapshot as published.
 
 ## Not yet implemented
 
-- customer analytics, model, dbt, and Airflow
+- customer analytics, model, and Airflow
+
+## dbt contract checks
+
+The dbt project in [`dbt/`](dbt/) exposes the already-verified PostgreSQL staging and mart contracts as analytics views without restating their business logic. See [`docs/architecture/DBT_CONTRACTS.md`](docs/architecture/DBT_CONTRACTS.md) for the environment-only profile and `dbt build` command.

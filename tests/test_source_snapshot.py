@@ -7,7 +7,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from retailpulse.ingestion.source_snapshot import compute_sha256, describe_snapshot
+from retailpulse.ingestion.source_snapshot import (
+    compute_sha256,
+    describe_snapshot,
+    materialized_snapshot,
+)
 
 
 TEST_TEMP_ROOT = Path(__file__).resolve().parents[1] / ".test-tmp"
@@ -58,3 +62,17 @@ class SourceSnapshotTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "source_uri"):
                 describe_snapshot(source, source_uri="   ")
+
+    def test_materialized_snapshot_keeps_the_bytes_that_were_hashed(self) -> None:
+        original_payload = b"original workbook bytes"
+        with project_temp_directory() as directory:
+            source = Path(directory) / "source.xlsx"
+            source.write_bytes(original_payload)
+
+            with materialized_snapshot(source, source_uri="https://example.test/source.xlsx") as snapshot:
+                source.write_bytes(b"replacement workbook bytes")
+                staged_path = snapshot.local_path
+                self.assertEqual(staged_path.read_bytes(), original_payload)
+                self.assertEqual(snapshot.sha256_hex, hashlib.sha256(original_payload).hexdigest())
+
+            self.assertFalse(staged_path.exists())
