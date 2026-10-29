@@ -14,6 +14,7 @@ from openpyxl import Workbook
 
 from retailpulse.ingestion.raw_loader import (
     EXPECTED_HEADERS,
+    ReconciliationError,
     WorkbookContractError,
     ingest_workbook,
 )
@@ -93,10 +94,16 @@ class FakeCursor:
             }
         elif normalised.startswith("select pg_advisory_xact_lock"):
             pass
-        elif normalised.startswith("select source_file_id, expected_row_count"):
+        elif normalised.startswith("select source_file.source_file_id, source_file.expected_row_count"):
             source = self.connection.sources.get(parameters[0])
+            has_successful_batch = source is not None and any(
+                batch["source_file_id"] == source["source_file_id"]
+                and batch["status"] == "SUCCEEDED"
+                and batch["committed_row_count"] == source["expected_row_count"]
+                for batch in self.connection.batches.values()
+            )
             self._fetchone = (
-                (source["source_file_id"], source["expected_row_count"])
+                (source["source_file_id"], source["expected_row_count"], has_successful_batch)
                 if source is not None
                 else None
             )
@@ -263,3 +270,27 @@ class RawLoaderTests(unittest.TestCase):
         self.assertEqual(result.status, "SUCCEEDED")
         self.assertEqual(connection.sources[expected_hash]["expected_row_count"], 3)
         self.assertEqual(len(connection.raw_rows), 3)
+
+    def test_same_hash_with_raw_rows_but_no_successful_batch_is_not_skipped(self) -> None:
+        with project_temp_directory() as directory:
+            workbook = Path(directory) / "source.xlsx"
+            write_workbook(workbook)
+            source_hash = compute_sha256(workbook)
+            connection = FakeConnection()
+            connection.sources[source_hash] = {
+                "source_file_id": 1,
+                "sha256": source_hash,
+                "expected_row_count": 3,
+            }
+            connection.raw_rows = [(1,), (1,), (1,)]
+
+            with self.assertRaisesRegex(ReconciliationError, "no reconciled SUCCEEDED batch"):
+                ingest_workbook(
+                    workbook,
+                    source_uri="https://example.test/online_retail_ii.xlsx",
+                    source_retrieved_at=datetime(2026, 10, 29, tzinfo=UTC),
+                    connection_factory=lambda: connection,
+                )
+
+        failed_batch = next(iter(connection.batches.values()))
+        self.assertEqual(failed_batch["status"], "FAILED")

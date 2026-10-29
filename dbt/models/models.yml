@@ -7,7 +7,8 @@ models:
       for revenue; cancellation invoices are NOT_EVALUATED, never auto-matched returns.
     tests:
       - unique_combination_of_columns:
-          combination_of_columns: [source_file_id, sheet_name, source_row_number]
+          arguments:
+            combination_of_columns: [source_file_id, sheet_name, source_row_number]
     columns:
       - name: source_file_id
         tests: [not_null]
@@ -19,18 +20,21 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: [SALE, CANCELLATION, QUARANTINE]
+              arguments:
+                values: [SALE, CANCELLATION, QUARANTINE]
       - name: cancellation_match_status
         tests:
           - not_null
           - accepted_values:
-              values: [NOT_EVALUATED, NOT_APPLICABLE]
+              arguments:
+                values: [NOT_EVALUATED, NOT_APPLICABLE]
 
   - name: mart_revenue_daily
     description: Event-date transaction revenue by immutable snapshot, not accounting revenue.
     tests:
       - unique_combination_of_columns:
-          combination_of_columns: [source_file_id, event_date]
+          arguments:
+            combination_of_columns: [source_file_id, event_date]
     columns:
       - name: source_file_id
         tests: [not_null]

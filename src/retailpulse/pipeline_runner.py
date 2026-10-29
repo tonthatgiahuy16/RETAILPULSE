@@ -11,6 +11,7 @@ from typing import Any, Protocol
 
 
 MIGRATION_FILENAME = re.compile(r"^(?P<migration_id>0*[1-9][0-9]*)_[a-z0-9_]+\.sql$")
+MIGRATION_LOCK_NAMESPACE = "retailpulse.schema_migration"
 
 
 class Cursor(Protocol):
@@ -103,51 +104,81 @@ def _ledger_rows(connection: Connection) -> dict[int, tuple[str, str]]:
         cursor.close()
 
 
+def _acquire_migration_lock(connection: Connection) -> None:
+    """Serialize the complete ledger check-and-apply sequence per database."""
+
+    cursor = connection.cursor()
+    try:
+        # This is session-scoped because each migration commits with its ledger
+        # row, while other runners must not inspect history between commits.
+        cursor.execute(
+            "select pg_advisory_lock(hashtextextended(%s, 0))",
+            (MIGRATION_LOCK_NAMESPACE,),
+        )
+    finally:
+        cursor.close()
+
+
+def _release_migration_lock(connection: Connection) -> None:
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            "select pg_advisory_unlock(hashtextextended(%s, 0))",
+            (MIGRATION_LOCK_NAMESPACE,),
+        )
+    finally:
+        cursor.close()
+
+
 def apply_migrations(connection: Connection, migrations_dir: Path) -> MigrationRun:
     """Apply each unseen migration once and reject changed or missing history."""
 
     migrations = discover_migrations(migrations_dir)
-    _ensure_ledger(connection)
-    ledger = _ledger_rows(connection)
-    repository_ids = {migration.migration_id for migration in migrations}
-    orphaned_ids = sorted(set(ledger) - repository_ids)
-    if orphaned_ids:
-        raise MigrationDriftError(
-            f"Applied migration(s) missing from repository: {orphaned_ids!r}"
-        )
-
-    applied: list[str] = []
-    already_applied: list[str] = []
-    for migration in migrations:
-        recorded = ledger.get(migration.migration_id)
-        if recorded is not None:
-            filename, checksum = recorded
-            if filename != migration.path.name or checksum != migration.checksum:
-                raise MigrationDriftError(
-                    f"Migration {migration.migration_id} differs from its applied ledger record"
-                )
-            already_applied.append(migration.path.name)
-            continue
-
-        cursor = connection.cursor()
-        try:
-            cursor.execute(migration.path.read_text(encoding="utf-8"))
-            cursor.execute(
-                """
-                insert into ops.schema_migration (migration_id, filename, checksum)
-                values (%s, %s, %s)
-                """,
-                (migration.migration_id, migration.path.name, migration.checksum),
+    _acquire_migration_lock(connection)
+    try:
+        _ensure_ledger(connection)
+        ledger = _ledger_rows(connection)
+        repository_ids = {migration.migration_id for migration in migrations}
+        orphaned_ids = sorted(set(ledger) - repository_ids)
+        if orphaned_ids:
+            raise MigrationDriftError(
+                f"Applied migration(s) missing from repository: {orphaned_ids!r}"
             )
-            connection.commit()
-        except Exception:
-            connection.rollback()
-            raise
-        finally:
-            cursor.close()
-        applied.append(migration.path.name)
 
-    return MigrationRun(tuple(applied), tuple(already_applied))
+        applied: list[str] = []
+        already_applied: list[str] = []
+        for migration in migrations:
+            recorded = ledger.get(migration.migration_id)
+            if recorded is not None:
+                filename, checksum = recorded
+                if filename != migration.path.name or checksum != migration.checksum:
+                    raise MigrationDriftError(
+                        f"Migration {migration.migration_id} differs from its applied ledger record"
+                    )
+                already_applied.append(migration.path.name)
+                continue
+
+            cursor = connection.cursor()
+            try:
+                cursor.execute(migration.path.read_text(encoding="utf-8"))
+                cursor.execute(
+                    """
+                    insert into ops.schema_migration (migration_id, filename, checksum)
+                    values (%s, %s, %s)
+                    """,
+                    (migration.migration_id, migration.path.name, migration.checksum),
+                )
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+            finally:
+                cursor.close()
+            applied.append(migration.path.name)
+
+        return MigrationRun(tuple(applied), tuple(already_applied))
+    finally:
+        _release_migration_lock(connection)
 
 
 def run_sql_checks(connection: Connection, checks: Iterable[Path]) -> tuple[str, ...]:

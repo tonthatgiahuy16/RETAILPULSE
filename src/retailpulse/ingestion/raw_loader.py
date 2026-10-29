@@ -226,16 +226,29 @@ def ingest_workbook(
                 _advisory_lock(cursor, snapshot.sha256_hex)
                 cursor.execute(
                     """
-                    select source_file_id, expected_row_count
-                    from ops.source_file
-                    where sha256 = %s
+                    select
+                        source_file.source_file_id,
+                        source_file.expected_row_count,
+                        exists (
+                            select 1
+                            from ops.ingestion_batch as successful_batch
+                            where successful_batch.source_file_id = source_file.source_file_id
+                              and successful_batch.status = 'SUCCEEDED'
+                              and successful_batch.committed_row_count = source_file.expected_row_count
+                        ) as has_successful_batch
+                    from ops.source_file as source_file
+                    where source_file.sha256 = %s
                     """,
                     (snapshot.sha256_hex,),
                 )
                 existing = cursor.fetchone()
 
                 if existing is not None:
-                    source_file_id, expected_row_count = int(existing[0]), int(existing[1])
+                    source_file_id, expected_row_count, has_successful_batch = (
+                        int(existing[0]),
+                        int(existing[1]),
+                        bool(existing[2]),
+                    )
                     cursor.execute(
                         "select count(*) from raw.online_retail_line where source_file_id = %s",
                         (source_file_id,),
@@ -245,6 +258,10 @@ def ingest_workbook(
                         raise ReconciliationError(
                             f"Existing source_file_id {source_file_id} records {expected_row_count} "
                             f"rows but raw contains {raw_row_count}"
+                        )
+                    if not has_successful_batch:
+                        raise ReconciliationError(
+                            f"Existing source_file_id {source_file_id} has no reconciled SUCCEEDED batch"
                         )
                     cursor.execute(
                         """
