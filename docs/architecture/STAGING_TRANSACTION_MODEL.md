@@ -10,7 +10,7 @@
 | Publish boundary | A source file is visible only when its successful ingestion batch's committed count and the current raw count both equal `ops.source_file.expected_row_count`. |
 | Deferred | Cancellation-to-sale matching, a definition of an accounting return, customer-level eligibility, revenue aggregation, and a dbt project. |
 
-The view is defined in [`migrations/002_staging_transaction_classification.sql`](../../migrations/002_staging_transaction_classification.sql). It depends on `001_raw_lineage.sql`. Migration `001` and raw ingestion have runtime evidence on the local development database; `002` has not yet been applied there.
+The view is defined in [`migrations/002_staging_transaction_classification.sql`](../../migrations/002_staging_transaction_classification.sql). It depends on `001_raw_lineage.sql`. Migrations `001` and `002` have runtime evidence on the local development database.
 
 ## Grain and lineage
 
@@ -38,4 +38,4 @@ Missing `Customer ID` is also a flag (`is_missing_customer_id`), not a quarantin
 
 Apply `002_staging_transaction_classification.sql` to the local development database containing the already-ingested snapshot. The gate in [`tests/sql/staging_transaction_classification.sql`](../../tests/sql/staging_transaction_classification.sql) must finish without error. It checks source-row coverage, allowed classes, quarantine reasons, and the no-auto-match rule.
 
-No PostgreSQL credential is committed to this repository. The model and SQL gate are present, but `002` database integration and the actual source-row counts by class are **Unknown** until the migration and gate run.
+No PostgreSQL credential is committed to this repository. On 2026-10-29, `002` was applied locally and the SQL gate completed without error: 1,067,371 source-row-grain staging rows with 1,047,877 `SALE`, 19,494 `CANCELLATION`, and no `QUARANTINE`. All 19,494 cancellation rows had `cancellation_match_status = NOT_EVALUATED`; no return matching was performed.
