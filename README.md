@@ -8,6 +8,8 @@ Slice 1 has a hash-recorded UCI source snapshot, its initial profile, source-sna
 
 Slice 2's staging migration was applied to the same local development database on 2026-10-29 and its SQL gate passed. `stg.online_retail_transaction` contains 1,067,371 source-row-grain rows: 1,047,877 `SALE` and 19,494 `CANCELLATION`; no row is `QUARANTINE` for this snapshot. Every cancellation remains `NOT_EVALUATED` for return matching.
 
+Slice 3's event-date revenue mart was applied and reconciled against staging on the same local database. `mart.revenue_daily` has 604 snapshot-day rows with gross sales `20,813,918.428`, cancellation signed amount `-1,526,667.86`, and net transaction amount `19,287,250.568`; it includes 1,067,371 transaction rows, of which 243,007 have missing Customer ID. This is not accounting revenue and cancellations are not return-matched.
+
 ## Slice 1 contract
 
 The input is an immutable source file. Its SHA-256 hash identifies its content. The same hash must not create a second raw copy. Raw rows retain their source sheet and row number; business-level duplicates are not removed at raw ingestion.
@@ -38,4 +40,4 @@ The loader streams rows, records each attempt in `ops.ingestion_batch`, serializ
 
 ## Not yet implemented
 
-- marts, reconciliation/data-quality report, customer analytics, model, dbt, and Airflow
+- reconciliation/data-quality report, customer analytics, model, dbt, and Airflow
