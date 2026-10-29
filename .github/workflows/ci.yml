@@ -1,0 +1,48 @@
+name: pipeline-ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: retailpulse_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d retailpulse_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PYTHONPATH: src
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/retailpulse_test
+      RETAILPULSE_INTEGRATION_DSN: postgresql://postgres:postgres@localhost:5432/retailpulse_test
+      RETAILPULSE_INTEGRATION_TEST: "1"
+      DBT_HOST: localhost
+      DBT_PORT: "5432"
+      DBT_USER: postgres
+      DBT_PASSWORD: postgres
+      DBT_DATABASE: retailpulse_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install project and dbt adapter
+        run: python -m pip install '.[transform]'
+      - name: Run unit and PostgreSQL integration tests
+        run: python -m unittest discover -s tests -v
+      - name: Bootstrap a clean database with the operational runner
+        run: python scripts/run_pipeline.py
+      - name: Run dbt contract build
+        run: |
+          cp dbt/profiles.example.yml dbt/profiles.yml
+          dbt build --project-dir dbt --profiles-dir dbt

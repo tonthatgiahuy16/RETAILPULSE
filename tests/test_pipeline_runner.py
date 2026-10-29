@@ -18,6 +18,7 @@ class FakeConnection:
         self.executed_sql: list[str] = []
         self.commit_count = 0
         self.rollback_count = 0
+        self.migration_lock_events: list[str] = []
 
     def cursor(self) -> "FakeCursor":
         return FakeCursor(self)
@@ -40,7 +41,11 @@ class FakeCursor:
     def execute(self, query: str, parameters: tuple[Any, ...] | None = None) -> None:
         normalised = " ".join(query.lower().split())
         parameters = parameters or ()
-        if normalised.startswith("select migration_id, filename, checksum"):
+        if normalised.startswith("select pg_advisory_lock"):
+            self.connection.migration_lock_events.append("acquired")
+        elif normalised.startswith("select pg_advisory_unlock"):
+            self.connection.migration_lock_events.append("released")
+        elif normalised.startswith("select migration_id, filename, checksum"):
             self.rows = [
                 (migration_id, filename, checksum)
                 for migration_id, (filename, checksum) in self.connection.ledger.items()
@@ -81,6 +86,7 @@ class PipelineRunnerTests(unittest.TestCase):
         self.assertEqual(second.already_applied, ("001_first.sql", "002_second.sql"))
         self.assertEqual(len(connection.ledger), 2)
         self.assertEqual(connection.executed_sql, ["select 1;", "select 2;"])
+        self.assertEqual(connection.migration_lock_events, ["acquired", "released", "acquired", "released"])
 
     def test_changed_applied_migration_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:
@@ -92,6 +98,8 @@ class PipelineRunnerTests(unittest.TestCase):
 
             with self.assertRaisesRegex(MigrationDriftError, "differs"):
                 apply_migrations(connection, directory)
+
+        self.assertEqual(connection.migration_lock_events[-2:], ["acquired", "released"])
 
     def test_sql_checks_are_sorted_and_leave_no_persistent_transaction(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:

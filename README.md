@@ -25,6 +25,8 @@ $env:PYTHONPATH = 'src'
 python -m unittest discover -s tests -v
 ```
 
+GitHub Actions starts an isolated PostgreSQL service, exercises migration bootstrap/rerun and concurrent runners, then runs `dbt build`. The PostgreSQL integration tests are intentionally skipped on a developer machine unless both `RETAILPULSE_INTEGRATION_TEST=1` and a dedicated `RETAILPULSE_INTEGRATION_DSN` are supplied; they reset schemas and must never point at a shared database.
+
 ## Run migrations, ingestion, and publish gates
 
 Set `DATABASE_URL` outside the repository, then run the migration and one ingestion attempt. `--source-retrieved-at` is the actual retrieval time of this local snapshot and must include its timezone.
