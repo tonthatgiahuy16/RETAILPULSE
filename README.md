@@ -6,6 +6,8 @@ RetailPulse is a learning project for a reproducible retail-data pipeline.
 
 Slice 1 has a hash-recorded UCI source snapshot, its initial profile, source-snapshot metadata, a PostgreSQL raw-layer migration, and a streaming raw-loader implementation with unit tests. On 2026-10-29 the migration and full raw ingestion were exercised against the local development database. The hash-recorded source manifest and raw table both contain 1,067,371 rows (525,461 for `Year 2009-2010`; 541,910 for `Year 2010-2011`). One same-hash rerun was recorded as `SKIPPED_ALREADY_LOADED` with no new raw rows; an intentionally failed insert was rolled back and recorded as `FAILED`.
 
+Slice 2's staging migration, view definition, and SQL gate are present in the repository, but `002_staging_transaction_classification.sql` has not been applied to the local development database. Its integration result and transaction-class counts remain **Unknown**.
+
 ## Slice 1 contract
 
 The input is an immutable source file. Its SHA-256 hash identifies its content. The same hash must not create a second raw copy. Raw rows retain their source sheet and row number; business-level duplicates are not removed at raw ingestion.
@@ -36,4 +38,5 @@ The loader streams rows, records each attempt in `ops.ingestion_batch`, serializ
 
 ## Not yet implemented
 
-- dbt staging, marts, dashboard, customer analytics, model, and Airflow
+- Slice 2 PostgreSQL integration: apply `002_staging_transaction_classification.sql` and run its SQL gate
+- marts, reconciliation/data-quality report, customer analytics, model, dbt, and Airflow

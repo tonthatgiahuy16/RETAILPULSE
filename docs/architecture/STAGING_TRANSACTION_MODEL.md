@@ -10,7 +10,7 @@
 | Publish boundary | A source file is visible only when its successful ingestion batch's committed count and the current raw count both equal `ops.source_file.expected_row_count`. |
 | Deferred | Cancellation-to-sale matching, a definition of an accounting return, customer-level eligibility, revenue aggregation, and a dbt project. |
 
-The view is defined in [`migrations/002_staging_transaction_classification.sql`](../../migrations/002_staging_transaction_classification.sql). It depends on `001_raw_lineage.sql` and has not been applied to PostgreSQL in this repository.
+The view is defined in [`migrations/002_staging_transaction_classification.sql`](../../migrations/002_staging_transaction_classification.sql). It depends on `001_raw_lineage.sql`. Migration `001` and raw ingestion have runtime evidence on the local development database; `002` has not yet been applied there.
 
 ## Grain and lineage
 
@@ -36,6 +36,6 @@ Missing `Customer ID` is also a flag (`is_missing_customer_id`), not a quarantin
 
 ## Gate and verification
 
-Run `001_raw_lineage.sql`, then `002_staging_transaction_classification.sql`, against an isolated PostgreSQL database containing an ingested snapshot. The gate in [`tests/sql/staging_transaction_classification.sql`](../../tests/sql/staging_transaction_classification.sql) must finish without error. It checks source-row coverage, allowed classes, quarantine reasons, and the no-auto-match rule.
+Apply `002_staging_transaction_classification.sql` to the local development database containing the already-ingested snapshot. The gate in [`tests/sql/staging_transaction_classification.sql`](../../tests/sql/staging_transaction_classification.sql) must finish without error. It checks source-row coverage, allowed classes, quarantine reasons, and the no-auto-match rule.
 
-This repository currently has no configured PostgreSQL credentials or executed migration evidence. The model and the SQL gate are present, but database integration and the actual source-row counts by class are **Unknown** until that command is run.
+No PostgreSQL credential is committed to this repository. The model and SQL gate are present, but `002` database integration and the actual source-row counts by class are **Unknown** until the migration and gate run.
