@@ -12,6 +12,10 @@ Slice 3's event-date revenue mart was applied and reconciled against staging on 
 
 Slice 4's reconciliation/data-quality report and fail-fast SQL gate were applied locally on 2026-10-29. The gate reconciles expected manifest rows to raw and staging counts, checks unique staging lineage and class coverage, and requires at least one mart day per published source snapshot.
 
+Slices 5 and 6 added a checksum-backed migration ledger, serialized migration runner, PostgreSQL integration CI, and dbt adapters. The ledger was bootstrapped through migration 006 on the local database; a rerun left every ledger application timestamp unchanged. A local dbt build created its two adapter views and passed all 14 tests without committing a credential.
+
+Slices 7–10 add candidate-only cancellation diagnostics, customer purchase events, data-derived RFM snapshots, and a leakage-safe repurchase-label baseline. They do not turn a cancellation candidate into an accounting return, net candidate cancellations from revenue, or claim campaign uplift/ROI.
+
 ## Slice 1 contract
 
 The input is an immutable source file. Its SHA-256 hash identifies its content. The same hash must not create a second raw copy. Raw rows retain their source sheet and row number; business-level duplicates are not removed at raw ingestion.

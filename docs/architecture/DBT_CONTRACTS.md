@@ -12,4 +12,4 @@ $env:DBT_PROFILES_DIR = '<directory containing profiles.yml>'
 dbt build --project-dir dbt
 ```
 
-`dbt build` has not been executed in this repository unless a result is recorded separately; it needs a PostgreSQL connection and dbt-postgres installed in the active environment.
+On 2026-10-29, a local `dbt build` created both adapter views and passed all 14 tests against the local PostgreSQL snapshot. It needs a PostgreSQL connection and `dbt-postgres` installed in the active environment; no credential belongs in the repository.

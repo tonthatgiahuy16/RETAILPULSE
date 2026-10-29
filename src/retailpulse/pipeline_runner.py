@@ -199,6 +199,30 @@ def run_sql_checks(connection: Connection, checks: Iterable[Path]) -> tuple[str,
         cursor.close()
 
 
+def refresh_ingestion_materializations(connection: Connection) -> tuple[str, ...]:
+    """Refresh derived relations whose source snapshot may have just changed."""
+
+    cursor = connection.cursor()
+    try:
+        cursor.execute("set local max_parallel_workers_per_gather = 0")
+        cursor.execute("refresh materialized view int.eligible_sale_line")
+        cursor.execute("refresh materialized view int.cancellation_line")
+        cursor.execute("refresh materialized view int.cancellation_sale_candidate_snapshot")
+        cursor.execute("refresh materialized view int.customer_purchase_event_snapshot")
+        connection.commit()
+        return (
+            "int.eligible_sale_line",
+            "int.cancellation_line",
+            "int.cancellation_sale_candidate_snapshot",
+            "int.customer_purchase_event_snapshot",
+        )
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+
+
 def connect_from_dsn(dsn: str) -> Connection:
     """Create a PostgreSQL connection without imposing a driver on unit tests."""
 

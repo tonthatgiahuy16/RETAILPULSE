@@ -9,7 +9,12 @@ from datetime import datetime
 from pathlib import Path
 
 from retailpulse.ingestion.raw_loader import ingest_workbook
-from retailpulse.pipeline_runner import apply_migrations, connect_from_dsn, run_sql_checks
+from retailpulse.pipeline_runner import (
+    apply_migrations,
+    connect_from_dsn,
+    refresh_ingestion_materializations,
+    run_sql_checks,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -51,6 +56,7 @@ def main() -> None:
                 source_retrieved_at=args.source_retrieved_at,
                 connection_factory=lambda: connection,
             )
+            refresh_ingestion_materializations(connection)
         checks = () if args.skip_checks else run_sql_checks(connection, (PROJECT_ROOT / "tests" / "sql").glob("*.sql"))
     finally:
         connection.close()  # type: ignore[attr-defined]

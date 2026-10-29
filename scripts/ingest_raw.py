@@ -9,7 +9,11 @@ from datetime import datetime
 from pathlib import Path
 
 from retailpulse.ingestion.raw_loader import connect_psycopg, ingest_workbook
-from retailpulse.pipeline_runner import apply_migrations, run_sql_checks
+from retailpulse.pipeline_runner import (
+    apply_migrations,
+    refresh_ingestion_materializations,
+    run_sql_checks,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -48,6 +52,7 @@ def main() -> None:
             connection_factory=lambda: connection,
         )
         if args.apply_migration:
+            refresh_ingestion_materializations(connection)
             run_sql_checks(connection, (PROJECT_ROOT / "tests" / "sql").glob("*.sql"))
     finally:
         connection.close()  # type: ignore[attr-defined]

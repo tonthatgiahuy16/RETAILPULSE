@@ -8,7 +8,7 @@
 | Input/source of truth | `raw.online_retail_line`, an immutable physical source row, with its `ops.source_file` and `ops.ingestion_batch` lineage. |
 | Output | `stg.online_retail_transaction`, a PostgreSQL view at exactly one row per published raw source row. |
 | Publish boundary | A source file is visible only when its successful ingestion batch's committed count and the current raw count both equal `ops.source_file.expected_row_count`. |
-| Deferred | Cancellation-to-sale matching, a definition of an accounting return, customer-level eligibility, revenue aggregation, and a dbt project. |
+| Deferred | A confirmed cancellation-to-sale return match, a definition of accounting revenue/returns, and any customer-level model beyond the published eligibility contract. Event-date revenue, dbt contract adapters, and candidate-only cancellation evidence are implemented separately. |
 
 The view is defined in [`migrations/002_staging_transaction_classification.sql`](../../migrations/002_staging_transaction_classification.sql). It depends on `001_raw_lineage.sql`. Migrations `001` and `002` have runtime evidence on the local development database.
 

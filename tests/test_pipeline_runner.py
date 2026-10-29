@@ -8,7 +8,12 @@ import tempfile
 import unittest
 from typing import Any
 
-from retailpulse.pipeline_runner import MigrationDriftError, apply_migrations, run_sql_checks
+from retailpulse.pipeline_runner import (
+    MigrationDriftError,
+    apply_migrations,
+    refresh_ingestion_materializations,
+    run_sql_checks,
+)
 
 
 class FakeConnection:
@@ -45,6 +50,8 @@ class FakeCursor:
             self.connection.migration_lock_events.append("acquired")
         elif normalised.startswith("select pg_advisory_unlock"):
             self.connection.migration_lock_events.append("released")
+        elif normalised.startswith("refresh materialized view"):
+            self.connection.executed_sql.append(query)
         elif normalised.startswith("select migration_id, filename, checksum"):
             self.rows = [
                 (migration_id, filename, checksum)
@@ -115,3 +122,29 @@ class PipelineRunnerTests(unittest.TestCase):
         self.assertEqual(executed, ("a_check.sql", "b_check.sql"))
         self.assertEqual(connection.executed_sql, ["select 'first';", "select 'second';"])
         self.assertEqual(connection.rollback_count, 1)
+
+    def test_ingestion_materialization_refresh_commits(self) -> None:
+        connection = FakeConnection()
+
+        refreshed = refresh_ingestion_materializations(connection)
+
+        self.assertEqual(
+            refreshed,
+            (
+                "int.eligible_sale_line",
+                "int.cancellation_line",
+                "int.cancellation_sale_candidate_snapshot",
+                "int.customer_purchase_event_snapshot",
+            ),
+        )
+        self.assertEqual(connection.commit_count, 1)
+        self.assertEqual(
+            connection.executed_sql,
+            [
+                "set local max_parallel_workers_per_gather = 0",
+                "refresh materialized view int.eligible_sale_line",
+                "refresh materialized view int.cancellation_line",
+                "refresh materialized view int.cancellation_sale_candidate_snapshot",
+                "refresh materialized view int.customer_purchase_event_snapshot",
+            ],
+        )
