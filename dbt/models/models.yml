@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: stg_online_retail_transaction
+    description: >-
+      One row per published raw source row. Missing Customer ID remains eligible
+      for revenue; cancellation invoices are NOT_EVALUATED, never auto-matched returns.
+    tests:
+      - unique_combination_of_columns:
+          combination_of_columns: [source_file_id, sheet_name, source_row_number]
+    columns:
+      - name: source_file_id
+        tests: [not_null]
+      - name: sheet_name
+        tests: [not_null]
+      - name: source_row_number
+        tests: [not_null]
+      - name: transaction_class
+        tests:
+          - not_null
+          - accepted_values:
+              values: [SALE, CANCELLATION, QUARANTINE]
+      - name: cancellation_match_status
+        tests:
+          - not_null
+          - accepted_values:
+              values: [NOT_EVALUATED, NOT_APPLICABLE]
+
+  - name: mart_revenue_daily
+    description: Event-date transaction revenue by immutable snapshot, not accounting revenue.
+    tests:
+      - unique_combination_of_columns:
+          combination_of_columns: [source_file_id, event_date]
+    columns:
+      - name: source_file_id
+        tests: [not_null]
+      - name: event_date
+        tests: [not_null]
+      - name: net_transaction_amount
+        tests: [not_null]

@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    description: Immutable source-row payloads; lineage is the physical workbook row.
+    tables:
+      - name: online_retail_line
+        description: Raw Online Retail II cells and source-row lineage.
+
+  - name: postgres_staging_contract
+    schema: stg
+    description: PostgreSQL staging contract created and reconciled by migrations 002 and 004.
+    tables:
+      - name: online_retail_transaction
+        description: Source-row-grain transaction classification; C remains an unmatched cancellation indicator.
+
+  - name: postgres_mart_contract
+    schema: mart
+    description: PostgreSQL mart contract created and reconciled by migrations 003 and 004.
+    tables:
+      - name: revenue_daily
+        description: Event-date transaction revenue, not accounting revenue.
