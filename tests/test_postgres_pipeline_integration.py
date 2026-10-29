@@ -48,6 +48,7 @@ class PostgresPipelineIntegrationTests(unittest.TestCase):
         try:
             with connection.cursor() as cursor:
                 cursor.execute("drop schema if exists mart cascade")
+                cursor.execute("drop schema if exists int cascade")
                 cursor.execute("drop schema if exists stg cascade")
                 cursor.execute("drop schema if exists raw cascade")
                 cursor.execute("drop schema if exists ops cascade")
@@ -77,14 +78,10 @@ class PostgresPipelineIntegrationTests(unittest.TestCase):
         self.assertEqual(second.applied, ())
         self.assertEqual(second.already_applied, first.applied)
         self.assertEqual(ledger, [(index, name) for index, name in enumerate(first.applied, start=1)])
-        self.assertEqual(
-            checks,
-            (
-                "mart_revenue_daily.sql",
-                "reconciliation_data_quality.sql",
-                "staging_transaction_classification.sql",
-            ),
+        expected_checks = tuple(
+            path.name for path in sorted((PROJECT_ROOT / "tests" / "sql").glob("*.sql"))
         )
+        self.assertEqual(checks, expected_checks)
 
     def test_two_runners_serialize_the_same_unapplied_migration(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:
