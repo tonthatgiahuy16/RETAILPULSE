@@ -10,6 +10,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
+from tempfile import NamedTemporaryFile
+from contextlib import contextmanager
+from collections.abc import Iterator
 
 
 @dataclass(frozen=True)
@@ -59,3 +62,46 @@ def describe_snapshot(path: Path, *, source_uri: str) -> SourceSnapshot:
         sha256_hex=compute_sha256(resolved_path),
         observed_at=datetime.now(UTC),
     )
+
+
+@contextmanager
+def materialized_snapshot(path: Path, *, source_uri: str) -> Iterator[SourceSnapshot]:
+    """Copy a source once, then identify and read only that immutable copy.
+
+    The caller must consume ``snapshot.local_path`` rather than the original
+    path.  This closes the time-of-check/time-of-use window where a workbook
+    could change after its hash was calculated but before rows were parsed.
+    The temporary copy is removed when this context exits, including failures.
+    """
+
+    if not source_uri.strip():
+        raise ValueError("source_uri must not be blank")
+    if not path.is_file():
+        raise FileNotFoundError(f"Source file does not exist or is not a file: {path}")
+
+    with NamedTemporaryFile(prefix="retailpulse-snapshot-", suffix=".xlsx", delete=False) as copy:
+        copy_path = Path(copy.name)
+        digest = sha256()
+        byte_size = 0
+        with path.open("rb") as source:
+            while chunk := source.read(1_048_576):
+                copy.write(chunk)
+                digest.update(chunk)
+                byte_size += len(chunk)
+
+    if byte_size == 0:
+        copy_path.unlink(missing_ok=True)
+        raise ValueError(f"Source file is empty: {path}")
+
+    snapshot = SourceSnapshot(
+        source_uri=source_uri,
+        local_path=copy_path,
+        original_filename=path.name,
+        byte_size=byte_size,
+        sha256_hex=digest.hexdigest(),
+        observed_at=datetime.now(UTC),
+    )
+    try:
+        yield snapshot
+    finally:
+        copy_path.unlink(missing_ok=True)

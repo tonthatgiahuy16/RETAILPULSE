@@ -9,30 +9,15 @@ from datetime import datetime
 from pathlib import Path
 
 from retailpulse.ingestion.raw_loader import connect_psycopg, ingest_workbook
+from retailpulse.pipeline_runner import apply_migrations, run_sql_checks
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-RAW_MIGRATION = PROJECT_ROOT / "migrations" / "001_raw_lineage.sql"
-
-
 def parse_timezone_aware_timestamp(value: str) -> datetime:
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
         raise argparse.ArgumentTypeError("Timestamp must include a timezone, for example +07:00")
     return parsed
-
-
-def apply_raw_migration(connection: object) -> None:
-    migration_sql = RAW_MIGRATION.read_text(encoding="utf-8")
-    cursor = connection.cursor()  # type: ignore[attr-defined]
-    try:
-        cursor.execute(migration_sql)
-        connection.commit()  # type: ignore[attr-defined]
-    except Exception:
-        connection.rollback()  # type: ignore[attr-defined]
-        raise
-    finally:
-        cursor.close()
 
 
 def main() -> None:
@@ -43,7 +28,7 @@ def main() -> None:
     parser.add_argument(
         "--apply-migration",
         action="store_true",
-        help="Apply migrations/001_raw_lineage.sql before loading (persistent database change).",
+        help="Apply the migration ledger before loading, then run SQL gates.",
     )
     parser.add_argument("--dsn-env", default="DATABASE_URL")
     args = parser.parse_args()
@@ -55,13 +40,15 @@ def main() -> None:
     connection = connect_psycopg(dsn)
     try:
         if args.apply_migration:
-            apply_raw_migration(connection)
+            apply_migrations(connection, PROJECT_ROOT / "migrations")
         result = ingest_workbook(
             args.workbook,
             source_uri=args.source_uri,
             source_retrieved_at=args.source_retrieved_at,
             connection_factory=lambda: connection,
         )
+        if args.apply_migration:
+            run_sql_checks(connection, (PROJECT_ROOT / "tests" / "sql").glob("*.sql"))
     finally:
         connection.close()  # type: ignore[attr-defined]
 

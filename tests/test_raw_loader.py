@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 from openpyxl import Workbook
 
@@ -16,6 +17,7 @@ from retailpulse.ingestion.raw_loader import (
     WorkbookContractError,
     ingest_workbook,
 )
+from retailpulse.ingestion.source_snapshot import compute_sha256
 
 
 TEST_TEMP_ROOT = Path(__file__).resolve().parents[1] / ".test-tmp"
@@ -233,3 +235,31 @@ class RawLoaderTests(unittest.TestCase):
         self.assertEqual(connection.raw_rows, [])
         failed_batch = next(iter(connection.batches.values()))
         self.assertEqual(failed_batch["status"], "FAILED")
+
+    def test_load_uses_the_materialized_bytes_if_input_changes_after_validation(self) -> None:
+        with project_temp_directory() as directory:
+            workbook = Path(directory) / "source.xlsx"
+            write_workbook(workbook)
+            expected_hash = compute_sha256(workbook)
+            connection = FakeConnection()
+
+            from retailpulse.ingestion.raw_loader import validate_workbook_contract as real_validate
+
+            def validate_then_replace(materialized_path: Path) -> None:
+                real_validate(materialized_path)
+                write_workbook(workbook, header=("changed", *EXPECTED_HEADERS[1:]))
+
+            with patch(
+                "retailpulse.ingestion.raw_loader.validate_workbook_contract",
+                side_effect=validate_then_replace,
+            ):
+                result = ingest_workbook(
+                    workbook,
+                    source_uri="https://example.test/online_retail_ii.xlsx",
+                    source_retrieved_at=datetime(2026, 10, 29, tzinfo=UTC),
+                    connection_factory=lambda: connection,
+                )
+
+        self.assertEqual(result.status, "SUCCEEDED")
+        self.assertEqual(connection.sources[expected_hash]["expected_row_count"], 3)
+        self.assertEqual(len(connection.raw_rows), 3)
