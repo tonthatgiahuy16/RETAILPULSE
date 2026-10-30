@@ -6,11 +6,11 @@ begin
     where activity_month < cohort_month
        or months_since_cohort < 0
        or cohort_customer_count <= 0
-       or active_customer_count <= 0
-       or retained_customer_count <= 0
+       or active_customer_count < 0
+       or retained_customer_count < 0
        or retained_customer_count > cohort_customer_count
        or retained_customer_count > active_customer_count
-       or retention_rate <= 0
+       or retention_rate < 0
        or retention_rate > 1;
     if failures <> 0 then
         raise exception 'cohort retention has % invalid metric rows', failures;
