@@ -47,6 +47,17 @@ class MigrationRun:
     already_applied: tuple[str, ...]
 
 
+def _checksum_matches_recorded_migration(path: Path, recorded_checksum: str) -> bool:
+    """Allow only CRLF/LF checkout variation for an already-applied migration."""
+
+    content = path.read_bytes()
+    raw_checksum = sha256(content).hexdigest()
+    logical_line_ending_checksum = sha256(
+        content.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    ).hexdigest()
+    return recorded_checksum in {raw_checksum, logical_line_ending_checksum}
+
+
 def discover_migrations(migrations_dir: Path) -> tuple[Migration, ...]:
     """Return contiguous, versioned SQL migrations with content checksums."""
 
@@ -151,7 +162,9 @@ def apply_migrations(connection: Connection, migrations_dir: Path) -> MigrationR
             recorded = ledger.get(migration.migration_id)
             if recorded is not None:
                 filename, checksum = recorded
-                if filename != migration.path.name or checksum != migration.checksum:
+                if filename != migration.path.name or not _checksum_matches_recorded_migration(
+                    migration.path, checksum
+                ):
                     raise MigrationDriftError(
                         f"Migration {migration.migration_id} differs from its applied ledger record"
                     )

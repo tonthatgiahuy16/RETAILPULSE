@@ -1,3 +1,8 @@
+-- stg.try_invoice_timestamp uses an exception block and cannot execute in a
+-- parallel worker. Keep this migration consistent with the existing staging
+-- materialization contract.
+set local max_parallel_workers_per_gather = 0;
+
 create schema if not exists dw;
 
 create materialized view dw.dim_date as

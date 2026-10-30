@@ -108,6 +108,20 @@ class PipelineRunnerTests(unittest.TestCase):
 
         self.assertEqual(connection.migration_lock_events[-2:], ["acquired", "released"])
 
+    def test_line_ending_only_change_does_not_drift_an_applied_migration(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            directory = Path(directory_name)
+            migration_path = directory / "001_first.sql"
+            migration_path.write_bytes(b"select 1;\n")
+            connection = FakeConnection()
+            apply_migrations(connection, directory)
+
+            migration_path.write_bytes(b"select 1;\r\n")
+            rerun = apply_migrations(connection, directory)
+
+        self.assertEqual(rerun.applied, ())
+        self.assertEqual(rerun.already_applied, ("001_first.sql",))
+
     def test_sql_checks_are_sorted_and_leave_no_persistent_transaction(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:
             directory = Path(directory_name)
