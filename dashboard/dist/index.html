@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="RetailPulse verified retail pipeline snapshot dashboard" />
+    <title>RetailPulse | Analytics Snapshot</title>
+    <style>
+      :root { --ink:#10233f; --muted:#62728a; --canvas:#f5f7fb; --panel:#fff; --line:#dfe6f0; --blue:#2563eb; --teal:#0f766e; --amber:#d97706; --rose:#be123c; --shadow:0 12px 32px rgba(28,48,83,.08); }
+      * { box-sizing:border-box; }
+      body { margin:0; color:var(--ink); background:var(--canvas); font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .shell { max-width:1240px; margin:0 auto; padding:32px 24px 56px; }
+      header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; padding:8px 0 30px; }
+      .eyebrow { margin:0 0 8px; color:var(--blue); font-size:.75rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+      h1 { margin:0; font-size:clamp(2rem,4vw,3.35rem); line-height:1.02; letter-spacing:-.05em; }
+      .sub { max-width:700px; margin:14px 0 0; color:var(--muted); font-size:1rem; line-height:1.6; }
+      .badge { flex:0 0 auto; border:1px solid #bce9dd; background:#e9fbf5; color:#0f5f52; border-radius:999px; padding:9px 13px; font-size:.82rem; font-weight:700; }
+      .snapshot { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:22px; }
+      .chip { background:#eaf0ff; color:#2955af; border-radius:999px; font-size:.78rem; font-weight:700; padding:7px 10px; }
+      .grid { display:grid; gap:16px; }
+      .metrics { grid-template-columns:repeat(4, minmax(0,1fr)); }
+      .card { background:var(--panel); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); padding:20px; }
+      .metric-label { color:var(--muted); font-size:.8rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+      .metric { margin:7px 0 6px; font-size:1.9rem; font-weight:800; letter-spacing:-.04em; }
+      .metric-note { margin:0; color:var(--muted); font-size:.82rem; }
+      .section { margin-top:30px; }
+      .section-title { display:flex; align-items:end; justify-content:space-between; gap:18px; margin-bottom:14px; }
+      h2 { margin:0; font-size:1.25rem; letter-spacing:-.025em; }
+      .section-title p { margin:0; color:var(--muted); font-size:.86rem; }
+      .two { grid-template-columns:1.4fr 1fr; }
+      .three { grid-template-columns:repeat(3,1fr); }
+      .chart-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+      .chart-head b { font-size:1.02rem; }
+      .chart-head span { color:var(--muted); font-size:.82rem; }
+      .waterfall { display:grid; gap:16px; }
+      .bar-row { display:grid; grid-template-columns:120px 1fr 106px; align-items:center; gap:12px; font-size:.86rem; }
+      .track { height:12px; overflow:hidden; background:#edf1f7; border-radius:99px; }
+      .fill { height:100%; border-radius:99px; }
+      .blue { background:linear-gradient(90deg,#3974ef,#75a1ff); } .teal { background:linear-gradient(90deg,#138978,#4ac5b2); } .rose { background:linear-gradient(90deg,#d94765,#fb9bb0); } .amber { background:linear-gradient(90deg,#d88518,#f1bf69); }
+      .value { text-align:right; font-weight:750; }
+      .donut-wrap { display:grid; grid-template-columns:150px 1fr; align-items:center; gap:22px; }
+      .donut { width:150px; height:150px; border-radius:50%; background:conic-gradient(var(--teal) 0 25.2%, var(--amber) 25.2% 34.6%, var(--rose) 34.6% 100%); position:relative; }
+      .donut:after { content:"19,494\A cancellations"; white-space:pre; position:absolute; inset:25px; display:grid; place-items:center; text-align:center; border-radius:50%; background:#fff; color:var(--ink); font-size:.78rem; font-weight:800; line-height:1.35; }
+      .legend { display:grid; gap:12px; }
+      .legend div { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:.87rem; }
+      .dot { width:10px; height:10px; display:inline-block; border-radius:50%; margin-right:8px; }
+      .legend-name { display:flex; align-items:center; color:var(--muted); }
+      .callout { border-left:4px solid var(--amber); background:#fff9ed; border-radius:0 14px 14px 0; padding:16px 18px; color:#775017; font-size:.9rem; line-height:1.55; }
+      .rfm { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
+      .rfm div { border-radius:14px; padding:15px; background:#f7f9fd; }
+      .rfm span { display:block; color:var(--muted); font-size:.78rem; font-weight:700; text-transform:uppercase; }
+      .rfm b { display:block; margin-top:7px; font-size:1.2rem; }
+      .score { margin-top:10px; height:10px; overflow:hidden; border-radius:999px; background:#edf1f7; }
+      .score i { display:block; height:100%; background:var(--blue); border-radius:inherit; }
+      .footer { margin-top:32px; padding:22px 0 0; border-top:1px solid var(--line); color:var(--muted); font-size:.82rem; line-height:1.55; }
+      @media (max-width:900px) { .metrics,.three { grid-template-columns:repeat(2,1fr); } .two { grid-template-columns:1fr; } }
+      @media (max-width:600px) { .shell { padding:24px 16px 40px; } header { display:block; } .badge { display:inline-block; margin-top:16px; } .metrics,.three,.rfm { grid-template-columns:1fr; } .bar-row { grid-template-columns:90px 1fr 78px; gap:8px; font-size:.76rem; } .donut-wrap { grid-template-columns:1fr; } }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <div>
+          <p class="eyebrow">RetailPulse / verified pipeline</p>
+          <h1>Retail analytics snapshot</h1>
+          <p class="sub">A read-only view of the verified Online Retail II pipeline: revenue, data quality, cancellation evidence, customer behavior, and the repurchase baseline.</p>
+        </div>
+        <span class="badge">Verified snapshot</span>
+      </header>
+
+      <div class="snapshot">
+        <span class="chip">Source snapshot: Online Retail II</span>
+        <span class="chip">1,067,371 source rows</span>
+        <span class="chip">Event period: 2009–2011</span>
+        <span class="chip">Published contracts: staging → marts</span>
+      </div>
+
+      <section class="grid metrics" aria-label="Executive metrics">
+        <article class="card"><div class="metric-label">Gross sales</div><div class="metric">$20.81m</div><p class="metric-note">Event-date amount, before cancellations</p></article>
+        <article class="card"><div class="metric-label">Net transactions</div><div class="metric">$19.29m</div><p class="metric-note">Gross sales plus signed cancellations</p></article>
+        <article class="card"><div class="metric-label">Customer events</div><div class="metric">36,969</div><p class="metric-note">Eligible customer × invoice events</p></article>
+        <article class="card"><div class="metric-label">RFM customers</div><div class="metric">5,878</div><p class="metric-note">One row per customer and source snapshot</p></article>
+      </section>
+
+      <section class="section">
+        <div class="section-title"><div><h2>Revenue and data completeness</h2><p>Event-date revenue mart at source snapshot × day grain.</p></div><p>604 published days</p></div>
+        <div class="grid two">
+          <article class="card">
+            <div class="chart-head"><b>Transaction composition</b><span>USD, rounded</span></div>
+            <div class="waterfall">
+              <div class="bar-row"><span>Gross sales</span><div class="track"><div class="fill blue" style="width:100%"></div></div><span class="value">$20.81m</span></div>
+              <div class="bar-row"><span>Cancellations</span><div class="track"><div class="fill rose" style="width:7.3%"></div></div><span class="value">−$1.53m</span></div>
+              <div class="bar-row"><span>Net amount</span><div class="track"><div class="fill teal" style="width:92.7%"></div></div><span class="value">$19.29m</span></div>
+            </div>
+          </article>
+          <article class="card">
+            <div class="chart-head"><b>Known customer coverage</b><span>Source-row level</span></div>
+            <div class="metric">77.2%</div>
+            <p class="metric-note">824,364 rows carry a Customer ID; 243,007 missing IDs remain in revenue rather than being discarded.</p>
+            <div class="score"><i style="width:77.2%"></i></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title"><div><h2>Cancellation evidence</h2><p>Candidate matching is diagnostic only; it never changes revenue.</p></div><p>19,494 cancellation rows</p></div>
+        <div class="grid two">
+          <article class="card donut-wrap">
+            <div class="donut" aria-label="25.2 percent matched candidate, 9.4 percent ambiguous, 65.4 percent unmatched"></div>
+            <div class="legend">
+              <div><span class="legend-name"><i class="dot" style="background:var(--teal)"></i>Matched candidate</span><b>4,907</b></div>
+              <div><span class="legend-name"><i class="dot" style="background:var(--amber)"></i>Ambiguous</span><b>1,833</b></div>
+              <div><span class="legend-name"><i class="dot" style="background:var(--rose)"></i>Unmatched</span><b>12,754</b></div>
+            </div>
+          </article>
+          <aside class="callout"><strong>Interpret carefully.</strong> A matched candidate is one heuristic edge using source snapshot, customer, stock code, quantity magnitude, and order. It is not proof of a return, does not modify the staging cancellation status, and is not netted from revenue as an accounting adjustment.</aside>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title"><div><h2>Customer lifecycle</h2><p>Customer marts exclude missing Customer IDs by contract and retain cancellation diagnostics separately.</p></div><p>Data-derived as-of date</p></div>
+        <div class="grid three">
+          <article class="card"><div class="metric-label">RFM snapshot</div><div class="metric">5,878</div><p class="metric-note">Customers with a customer purchase event in the source snapshot.</p></article>
+          <article class="card"><div class="metric-label">Repurchase labels</div><div class="metric">2,784</div><p class="metric-note">Customers active in the 180-day observation window.</p></article>
+          <article class="card"><div class="metric-label">Observed repurchase</div><div class="metric">1,722</div><p class="metric-note">Customers buying again in the final 90-day prediction window.</p></article>
+        </div>
+        <article class="card" style="margin-top:16px">
+          <div class="chart-head"><b>Frequency ≥ 2 baseline</b><span>Evaluation, not a production prediction service</span></div>
+          <div class="rfm"><div><span>Accuracy</span><b>66.0%</b></div><div><span>Precision</span><b>75.3%</b></div><div><span>Recall</span><b>67.1%</b></div></div>
+        </article>
+      </section>
+
+      <footer class="footer">
+        Snapshot values come from RetailPulse PostgreSQL staging and mart contracts after their SQL quality gates passed. The dashboard intentionally does not claim accounting revenue, matched returns, campaign uplift, or ROI. It is a static verified snapshot, not a live operational feed.
+      </footer>
+    </main>
+  </body>
+</html>
