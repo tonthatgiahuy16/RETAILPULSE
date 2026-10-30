@@ -48,7 +48,7 @@ The runner records each applied migration and its SHA-256 in `ops.schema_migrati
 
 ## Not yet implemented
 
-- customer analytics, model, and Airflow
+- production predictive model and Airflow
 
 ## dbt contract checks
 
