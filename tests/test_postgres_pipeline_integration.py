@@ -14,11 +14,13 @@ from queue import Queue
 import tempfile
 import threading
 import unittest
+from uuid import uuid4
 
 from retailpulse.pipeline_runner import (
     apply_migrations,
     connect_from_dsn,
     discover_migrations,
+    refresh_ingestion_materializations,
     run_sql_checks,
 )
 
@@ -52,6 +54,8 @@ class PostgresPipelineIntegrationTests(unittest.TestCase):
                 cursor.execute("drop schema if exists mart cascade")
                 cursor.execute("drop schema if exists int cascade")
                 cursor.execute("drop schema if exists stg cascade")
+                cursor.execute("drop schema if exists decision cascade")
+                cursor.execute("drop schema if exists dw cascade")
                 cursor.execute("drop schema if exists raw cascade")
                 cursor.execute("drop schema if exists ops cascade")
             connection.commit()
@@ -189,3 +193,128 @@ class PostgresPipelineIntegrationTests(unittest.TestCase):
                 (date(2020, 2, 1), date(2020, 2, 1), 0, 1, 1, Decimal("1")),
             ],
         )
+
+    def test_warehouse_and_decision_contracts_preserve_lineage_and_temporal_boundaries(self) -> None:
+        """Exercise the new dimensions/fact and decision views on published rows."""
+
+        connection = connect_from_dsn(self.dsn)
+        batch_id = uuid4()
+        try:
+            apply_migrations(connection, PROJECT_ROOT / "migrations")
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    insert into ops.source_file (
+                        sha256, source_uri, original_filename, byte_size,
+                        source_retrieved_at, expected_row_count
+                    ) values (%s, %s, %s, %s, %s, %s)
+                    returning source_file_id
+                    """,
+                    (
+                        "a" * 64,
+                        "https://example.test/synthetic.xlsx",
+                        "synthetic.xlsx",
+                        1,
+                        "2020-11-02T00:00:00+00:00",
+                        4,
+                    ),
+                )
+                source_file_id = cursor.fetchone()[0]
+                cursor.execute(
+                    "insert into ops.ingestion_batch (batch_id, source_file_id, status) values (%s, %s, 'STARTED')",
+                    (batch_id, source_file_id),
+                )
+                cursor.executemany(
+                    """
+                    insert into raw.online_retail_line (
+                        source_file_id, sheet_name, source_row_number, first_ingestion_batch_id,
+                        invoice_no_raw, stock_code_raw, description_raw, quantity_raw,
+                        invoice_date_raw, unit_price_raw, customer_id_raw, country_raw
+                    ) values (%s, 'synthetic', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    [
+                        (source_file_id, 2, batch_id, "10001", "ITEM1", "first widget", "1", "2020-07-01 10:00:00", "10", "customer-a", "United Kingdom"),
+                        (source_file_id, 3, batch_id, "10002", "ITEM1", " latest   widget ", "1", "2020-11-01 10:00:00", "12", "customer-a", "United Kingdom"),
+                        (source_file_id, 4, batch_id, "10003", "POST", "Postage", "1", "2020-11-01 11:00:00", "2", None, "United Kingdom"),
+                        (source_file_id, 5, batch_id, "10004", "ITEM2", "Another item", "1", "2020-11-01 12:00:00", "3", None, "United Kingdom"),
+                    ],
+                )
+                cursor.execute(
+                    """
+                    update ops.ingestion_batch
+                    set status = 'SUCCEEDED', completed_at = now(), committed_row_count = 4
+                    where batch_id = %s
+                    """,
+                    (batch_id,),
+                )
+            connection.commit()
+            refresh_ingestion_materializations(connection)
+            checks = run_sql_checks(
+                connection,
+                [
+                    PROJECT_ROOT / "tests" / "sql" / "018_dimensional_warehouse.sql",
+                    PROJECT_ROOT / "tests" / "sql" / "019_customer_priority_decision.sql",
+                ],
+            )
+
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    select customer_id, first_seen_at::date, primary_country
+                    from dw.dim_customer
+                    order by customer_id
+                    """
+                )
+                customer_rows = cursor.fetchall()
+                cursor.execute(
+                    """
+                    select count(*), count(*) filter (where customer_key is null)
+                    from dw.fct_sales_line
+                    """
+                )
+                fact_counts = cursor.fetchone()
+                cursor.execute(
+                    """
+                    select latest_normalized_description, special_item_class
+                    from dw.dim_product
+                    where stock_code = 'ITEM1'
+                    """
+                )
+                item1 = cursor.fetchone()
+                cursor.execute(
+                    """
+                    select special_item_class
+                    from dw.dim_product
+                    where stock_code = 'POST'
+                    """
+                )
+                post_class = cursor.fetchone()[0]
+                cursor.execute(
+                    """
+                    select customer_id, frequency, monetary_amount, priority_segment
+                    from decision.customer_priority_snapshot
+                    """
+                )
+                snapshot_rows = cursor.fetchall()
+                cursor.execute(
+                    """
+                    select customer_id, observation_frequency, repurchased_in_prediction_window,
+                           label_interpretation
+                    from decision.customer_priority_backtest
+                    """
+                )
+                backtest_rows = cursor.fetchall()
+        finally:
+            connection.close()
+
+        self.assertEqual(customer_rows, [("customer-a", date(2020, 7, 1), "United Kingdom")])
+        self.assertEqual(fact_counts, (4, 2))
+        self.assertEqual(item1, ("LATEST WIDGET", "MERCHANDISE_OR_UNCLASSIFIED"))
+        self.assertEqual(post_class, "SERVICE_OR_FEE")
+        self.assertEqual(snapshot_rows, [("customer-a", 2, Decimal("22"), "CHAMPIONS")])
+        self.assertEqual(
+            backtest_rows,
+            [("customer-a", 1, True, "BACKTEST_OUTCOME_ONLY_NOT_CAUSAL_RESPONSE")],
+        )
+        self.assertIn("018_dimensional_warehouse.sql", checks)
+        self.assertIn("019_customer_priority_decision.sql", checks)

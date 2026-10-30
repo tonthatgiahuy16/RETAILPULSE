@@ -68,8 +68,8 @@ run in another environment.
 | dbt | Adapter views and contract tests over PostgreSQL staging and mart relations | Implemented |
 | Customer analytics | Candidate-only cancellation diagnostics, customer purchase events, RFM, repurchase label baseline, and cohort retention | Implemented |
 | Dashboard | Static, read-only verified snapshot dashboard | Implemented |
-| Dimensional warehouse | Star schema with facts and dimensions | Planned |
-| Decision and ML | Trained model, scoring, prioritisation, and recommendation table | Planned |
+| Dimensional warehouse | Snapshot-scoped customer, product, and date dimensions plus a lineage-preserving sales-line fact | Implemented in code; runtime evidence pending |
+| Decision and ML | Rule-based RFM priority contract and leakage-safe label backtest; trained model/scoring remain planned | Implemented in code; runtime evidence pending |
 | Orchestration | Airflow DAG and backfill operations | Planned |
 
 The detailed and authoritative implementation contracts live in

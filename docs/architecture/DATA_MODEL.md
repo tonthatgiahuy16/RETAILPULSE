@@ -1,9 +1,8 @@
 # RetailPulse data model
 
-This is the current PostgreSQL contract model, not a proposed dimensional
-warehouse. `raw` is the durable immutable source of truth. `stg`, `int`, and
-`mart` are derived views or refreshable materialized projections. The planned
-star schema is intentionally not shown because it does not yet exist.
+This is the current PostgreSQL contract model. `raw` is the durable immutable
+source of truth. `stg`, `int`, `mart`, `dw`, and `decision` are derived views
+or refreshable materialized projections; none replace raw lineage.
 
 ## ERD
 
@@ -30,6 +29,14 @@ erDiagram
     MART_CUSTOMER_PURCHASE_EVENT ||--|| MART_CUSTOMER_COHORT_RETENTION : "dense cohort calendar"
     INT_CUSTOMER_PURCHASE_EVENT_SNAPSHOT ||--|| MART_CUSTOMER_REPURCHASE_LABEL_DATASET : "temporal label"
     MART_CUSTOMER_REPURCHASE_LABEL_DATASET ||--|| MART_CUSTOMER_REPURCHASE_BASELINE_EVALUATION : "baseline aggregate"
+    STG_ONLINE_RETAIL_TRANSACTION ||--o{ DW_FCT_SALES_LINE : "published SALE source row"
+    DW_DIM_DATE ||--o{ DW_FCT_SALES_LINE : "date_key logical join"
+    DW_DIM_CUSTOMER ||--o{ DW_FCT_SALES_LINE : "nullable customer_key logical join"
+    DW_DIM_PRODUCT ||--o{ DW_FCT_SALES_LINE : "nullable product_key logical join"
+    MART_CUSTOMER_RFM_SNAPSHOT ||--|| DECISION_CUSTOMER_PRIORITY_SNAPSHOT : "descriptive current segment"
+    MART_CUSTOMER_REPURCHASE_LABEL_DATASET ||--|| DECISION_CUSTOMER_PRIORITY_BACKTEST : "temporal outcome only"
+    DW_DIM_CUSTOMER ||--o{ DECISION_CUSTOMER_PRIORITY_SNAPSHOT : "primary country logical join"
+    DW_DIM_CUSTOMER ||--o{ DECISION_CUSTOMER_PRIORITY_BACKTEST : "primary country logical join"
 
     OPS_SOURCE_FILE {
         bigint source_file_id PK
@@ -168,6 +175,12 @@ erDiagram
 | `mart.customer_cohort_retention` | View | Source snapshot × cohort month × activity month | Dense calendar with zero retention rows. |
 | `mart.customer_repurchase_label_dataset` | View | Customer × source snapshot × temporal window | Leakage-bounded features and label. |
 | `mart.customer_repurchase_baseline_evaluation` | View | Source snapshot × temporal window | Frequency ≥ 2 baseline evaluation. |
+| `dw.dim_date` | Materialized view | Calendar date | Conformed date dimension from staging timestamps. |
+| `dw.dim_customer` | Materialized view | Source snapshot × customer | First seen timestamp and deterministic primary country. |
+| `dw.dim_product` | Materialized view | Source snapshot × StockCode | Latest normalized description and heuristic special-item class. |
+| `dw.fct_sales_line` | Materialized view | One `SALE` staging source row | Lineage-preserving sales fact; nullable customer/product keys are retained. |
+| `decision.customer_priority_snapshot` | View | Source snapshot × RFM as-of date × customer | Descriptive RFM segment and capacity rank; no outcome label. |
+| `decision.customer_priority_backtest` | View | Source snapshot × observed customer | Observation-only features, segment/rank, country, and historical repurchase label. |
 
 ## Boundaries
 
@@ -179,9 +192,13 @@ erDiagram
    RFM, cohorts, labels, and baseline metrics.
 4. Cancellation candidates and diagnostics never change staging cancellation
    status, revenue, or customer purchase amount.
-5. The runner refreshes eligible-sale, cancellation, candidate, and
-   customer-event materialized snapshots after successful ingestion and before
-   SQL gates. Their dependent views reflect that snapshot state.
+5. The runner refreshes eligible-sale, cancellation, candidate,
+   customer-event, and dimensional materialized snapshots after successful
+   ingestion and before SQL gates. Their dependent views reflect that snapshot
+   state.
+
+See [Dimensional warehouse](DIMENSIONAL_WAREHOUSE.md) and [Customer priority
+decision](CUSTOMER_PRIORITY_DECISION.md) for keys, business rules, and limits.
 
 See [KPI Dictionary](KPI_DICTIONARY.md) for metric semantics and
 [Pipeline Operations](PIPELINE_OPERATIONS.md) for ledger, refresh, retry, and

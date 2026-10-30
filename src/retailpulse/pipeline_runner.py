@@ -209,12 +209,20 @@ def refresh_ingestion_materializations(connection: Connection) -> tuple[str, ...
         cursor.execute("refresh materialized view int.cancellation_line")
         cursor.execute("refresh materialized view int.cancellation_sale_candidate_snapshot")
         cursor.execute("refresh materialized view int.customer_purchase_event_snapshot")
+        cursor.execute("refresh materialized view dw.dim_date")
+        cursor.execute("refresh materialized view dw.dim_customer")
+        cursor.execute("refresh materialized view dw.dim_product")
+        cursor.execute("refresh materialized view dw.fct_sales_line")
         connection.commit()
         return (
             "int.eligible_sale_line",
             "int.cancellation_line",
             "int.cancellation_sale_candidate_snapshot",
             "int.customer_purchase_event_snapshot",
+            "dw.dim_date",
+            "dw.dim_customer",
+            "dw.dim_product",
+            "dw.fct_sales_line",
         )
     except Exception:
         connection.rollback()

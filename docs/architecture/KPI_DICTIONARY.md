@@ -132,6 +132,24 @@ reconciliation (`mart_revenue_daily.sql`), candidate resolution (`007`),
 customer-event reconciliation (`008`), RFM (`009`), label/leakage and baseline
 validity (`010`), and cohort/dense-calendar reconciliation (`016`, `017`).
 
+## Dimensional and decision-support measures
+
+**Relations:** `dw.fct_sales_line`, `decision.customer_priority_snapshot`, and
+`decision.customer_priority_backtest`.
+
+| Measure | Grain and definition | Limit |
+|---|---|---|
+| Sales Line Amount | One published `SALE` source row; `quantity * unit_price` in `dw.fct_sales_line`. | Event-date transaction amount, not accounting revenue; null Customer ID remains present with a null dimension key. |
+| Customer First Seen | Source snapshot × customer; `min(staging.invoice_at)` in `dw.dim_customer`. | Includes any typed staging transaction with a valid Customer ID/date; it is not the first eligible purchase-event date. |
+| Primary Country | Source snapshot × customer; most frequent non-null staging country, with deterministic tie-breaks. | Convenience dimension attribute, not a verified domicile. |
+| Current Priority Segment | Source snapshot × RFM as-of date × customer; percentile rule in `decision.customer_priority_snapshot`. | Descriptive segmentation only; no future label or response prediction. |
+| Backtest Priority Segment | Source snapshot × customer active in observation window; same rule using observation-only recency/frequency/monetary values. | The label is a historical repurchase outcome, not campaign response or causal uplift. |
+| Illustrative Budget Capacity | One fixed scenario: 1,000 campaign units / 2 units per contact / 500 ranks eligible. | No currency, actual cost, response rate, revenue, profit, ROI, or uplift is asserted. |
+
+Gates `018` and `019` validate warehouse lineage/dimensions and decision
+grains/disclosures respectively. See [Dimensional warehouse](DIMENSIONAL_WAREHOUSE.md)
+and [Customer priority decision](CUSTOMER_PRIORITY_DECISION.md).
+
 Inspect `ops.schema_migration`, `ops.ingestion_batch`, and the exact runner
 output for runtime status. This dictionary defines semantics; it is not itself
 evidence that a database refresh has run.

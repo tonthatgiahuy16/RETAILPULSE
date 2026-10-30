@@ -135,6 +135,10 @@ class PipelineRunnerTests(unittest.TestCase):
                 "int.cancellation_line",
                 "int.cancellation_sale_candidate_snapshot",
                 "int.customer_purchase_event_snapshot",
+                "dw.dim_date",
+                "dw.dim_customer",
+                "dw.dim_product",
+                "dw.fct_sales_line",
             ),
         )
         self.assertEqual(connection.commit_count, 1)
@@ -146,5 +150,9 @@ class PipelineRunnerTests(unittest.TestCase):
                 "refresh materialized view int.cancellation_line",
                 "refresh materialized view int.cancellation_sale_candidate_snapshot",
                 "refresh materialized view int.customer_purchase_event_snapshot",
+                "refresh materialized view dw.dim_date",
+                "refresh materialized view dw.dim_customer",
+                "refresh materialized view dw.dim_product",
+                "refresh materialized view dw.fct_sales_line",
             ],
         )
