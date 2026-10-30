@@ -2,6 +2,10 @@
 
 RetailPulse is a learning project for a reproducible retail-data pipeline.
 
+The project purpose, scope, decision guardrails, and evidence policy are in
+the [Project Charter](docs/project/PROJECT_CHARTER.md). Technical contracts
+remain under [`docs/data/`](docs/data/) and [`docs/architecture/`](docs/architecture/).
+
 ## Current status
 
 Slice 1 has a hash-recorded UCI source snapshot, its initial profile, source-snapshot metadata, a PostgreSQL raw-layer migration, and a streaming raw-loader implementation with unit tests. On 2026-10-29 the migration and full raw ingestion were exercised against the local development database. The hash-recorded source manifest and raw table both contain 1,067,371 rows (525,461 for `Year 2009-2010`; 541,910 for `Year 2010-2011`). One same-hash rerun was recorded as `SKIPPED_ALREADY_LOADED` with no new raw rows; an intentionally failed insert was rolled back and recorded as `FAILED`.
