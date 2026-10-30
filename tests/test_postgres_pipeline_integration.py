@@ -6,6 +6,8 @@ from a developer shell unless both required environment variables are set.
 
 from __future__ import annotations
 
+from datetime import date
+from decimal import Decimal
 import os
 from pathlib import Path
 from queue import Queue
@@ -122,3 +124,68 @@ class PostgresPipelineIntegrationTests(unittest.TestCase):
         finally:
             connection.close()
         self.assertEqual(ledger_count, 1)
+
+    def test_dense_cohort_retention_materializes_zero_retention_months(self) -> None:
+        """A cohort with no later event must still emit an explicit zero row."""
+
+        connection = connect_from_dsn(self.dsn)
+        try:
+            apply_migrations(connection, PROJECT_ROOT / "migrations")
+            with connection.cursor() as cursor:
+                cursor.execute("drop view mart.customer_cohort_retention")
+                cursor.execute("drop view mart.customer_purchase_event cascade")
+                cursor.execute(
+                    """
+                    create view mart.customer_purchase_event as
+                    select *
+                    from (
+                        values
+                            (1::bigint, 'synthetic'::text, 'customer-a'::text,
+                             'invoice-a'::text, timestamp '2020-01-15 10:00:00',
+                             1::bigint, 10::numeric, 0::numeric, 0::numeric),
+                            (1::bigint, 'synthetic'::text, 'customer-b'::text,
+                             'invoice-b'::text, timestamp '2020-02-15 10:00:00',
+                             1::bigint, 10::numeric, 0::numeric, 0::numeric)
+                    ) as event(
+                        source_file_id,
+                        source_sha256,
+                        customer_id,
+                        invoice_no,
+                        event_at,
+                        eligible_sale_row_count,
+                        gross_purchase_amount,
+                        matched_candidate_cancellation_row_count,
+                        ambiguous_candidate_cancellation_row_count
+                    )
+                    """
+                )
+                cursor.execute(
+                    (PROJECT_ROOT / "migrations" / "017_dense_customer_cohort_retention.sql").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                cursor.execute(
+                    """
+                    select
+                        cohort_month,
+                        activity_month,
+                        months_since_cohort,
+                        active_customer_count,
+                        retained_customer_count,
+                        retention_rate
+                    from mart.customer_cohort_retention
+                    order by cohort_month, activity_month
+                    """
+                )
+                rows = cursor.fetchall()
+        finally:
+            connection.close()
+
+        self.assertEqual(
+            rows,
+            [
+                (date(2020, 1, 1), date(2020, 1, 1), 0, 1, 1, Decimal("1")),
+                (date(2020, 1, 1), date(2020, 2, 1), 1, 1, 0, Decimal("0")),
+                (date(2020, 2, 1), date(2020, 2, 1), 0, 1, 1, Decimal("1")),
+            ],
+        )
