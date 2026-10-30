@@ -150,6 +150,24 @@ Gates `018` and `019` validate warehouse lineage/dimensions and decision
 grains/disclosures respectively. See [Dimensional warehouse](DIMENSIONAL_WAREHOUSE.md)
 and [Customer priority decision](CUSTOMER_PRIORITY_DECISION.md).
 
+## Repurchase model evaluation
+
+**Artifact:** local ignored JSON output from
+`scripts/train_repurchase_model.py`.
+**Evaluation grain:** one customer at the final data-derived prediction cutoff.
+
+| Measure | Definition | Limit |
+|---|---|---|
+| PR-AUC | `average_precision_score(label, ranking_score)` on the final temporal holdout. | Ranking quality on one source snapshot; not campaign response. |
+| ROC-AUC | `roc_auc_score(label, ranking_score)` on the final temporal holdout. | Does not select an operating threshold. |
+| Precision / Recall at 0.5 | Classification metrics using probability `>= 0.5`; baseline remains `observation_frequency >= 2`. | Threshold choice has a recall/precision trade-off. |
+| Lift at top 20% | Positive rate among top 20% ranked customers divided by holdout positive rate. | Historical ranking diagnostic; not incremental lift/uplift. |
+| Brier Score / Calibration Bins | Mean squared probability error and observed rate in five probability ranges. | Reported for probability model only; calibration needs more snapshots before operational use. |
+
+The model's rolling examples use 180 observation days and 90 prediction days.
+Earlier non-overlapping cutoffs train; the final cutoff must exactly match
+`mart.customer_repurchase_label_dataset`. See [Repurchase model evaluation](REPURCHASE_MODEL_EVALUATION.md).
+
 Inspect `ops.schema_migration`, `ops.ingestion_batch`, and the exact runner
 output for runtime status. This dictionary defines semantics; it is not itself
 evidence that a database refresh has run.
