@@ -1,0 +1,220 @@
+table 'bi sales_line'
+	lineageTag: c4a2b648-6ed5-45bc-a88b-ac17e86ce58e
+
+	column source_file_id
+		dataType: int64
+		formatString: 0
+		lineageTag: 752c8159-f6e9-47af-9f65-d2a6f7571400
+		summarizeBy: none
+		sourceColumn: source_file_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column sheet_name
+		dataType: string
+		lineageTag: 30267228-3cee-4087-975f-89319b99d54e
+		summarizeBy: none
+		sourceColumn: sheet_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_row_number
+		dataType: int64
+		formatString: 0
+		lineageTag: 0038ed11-77d4-419e-ba61-c2d265e3bed3
+		summarizeBy: sum
+		sourceColumn: source_row_number
+
+		annotation SummarizationSetBy = Automatic
+
+	column invoice_no
+		dataType: string
+		lineageTag: ca536f7d-b25a-4a2a-9752-927daca90a78
+		summarizeBy: none
+		sourceColumn: invoice_no
+
+		annotation SummarizationSetBy = Automatic
+
+	column date_key
+		dataType: int64
+		formatString: 0
+		lineageTag: b3da576d-9099-42cb-ad8a-d5eba770d579
+		summarizeBy: sum
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column calendar_date
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 2882365b-1a9e-4d6b-ab16-74fe713f5b4c
+		summarizeBy: none
+		sourceColumn: calendar_date
+
+		variation Variation
+			isDefault
+			relationship: 809b5d11-495f-4d63-8744-267fcb2f895a
+			defaultHierarchy: LocalDateTable_3e3faa90-12a7-4391-a356-128fc2e033f7.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column calendar_year
+		dataType: int64
+		formatString: 0
+		lineageTag: b7c69b70-d81a-4e40-add6-ca539cb89690
+		summarizeBy: sum
+		sourceColumn: calendar_year
+
+		annotation SummarizationSetBy = Automatic
+
+	column calendar_quarter
+		dataType: int64
+		formatString: 0
+		lineageTag: 7b76ef6d-5e34-45b5-a4ba-af519ebbe3cb
+		summarizeBy: sum
+		sourceColumn: calendar_quarter
+
+		annotation SummarizationSetBy = Automatic
+
+	column calendar_month
+		dataType: int64
+		formatString: 0
+		lineageTag: 84025c7c-a4da-412d-b2d1-a64f4eb84994
+		summarizeBy: sum
+		sourceColumn: calendar_month
+
+		annotation SummarizationSetBy = Automatic
+
+	column iso_day_of_week
+		dataType: int64
+		formatString: 0
+		lineageTag: 50af9d9a-7a6f-4800-a208-c6fe9de239fc
+		summarizeBy: sum
+		sourceColumn: iso_day_of_week
+
+		annotation SummarizationSetBy = Automatic
+
+	column customer_key
+		dataType: string
+		lineageTag: 97dff395-7e77-48da-8918-1c1821ab6d26
+		summarizeBy: none
+		sourceColumn: customer_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column customer_id
+		dataType: string
+		lineageTag: e4eb0f0e-55f7-4c4c-9c18-5095618a9c9c
+		summarizeBy: none
+		sourceColumn: customer_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column primary_country
+		dataType: string
+		lineageTag: 7621b1ba-acc4-44a3-9435-97dcb7882b72
+		summarizeBy: none
+		sourceColumn: primary_country
+
+		annotation SummarizationSetBy = Automatic
+
+	column product_key
+		dataType: string
+		lineageTag: 0f5790aa-84a3-415e-a41d-b2d8a13acc8d
+		summarizeBy: none
+		sourceColumn: product_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column stock_code
+		dataType: string
+		lineageTag: 1b7ade81-0427-4e3e-ae92-5e6f5e06e6f1
+		summarizeBy: none
+		sourceColumn: stock_code
+
+		annotation SummarizationSetBy = Automatic
+
+	column latest_normalized_description
+		dataType: string
+		lineageTag: 0f410b9a-ed37-4369-8e1e-fcf6fbba0578
+		summarizeBy: none
+		sourceColumn: latest_normalized_description
+
+		annotation SummarizationSetBy = Automatic
+
+	column special_item_class
+		dataType: string
+		lineageTag: 55ec634e-336e-4cda-8ff0-e87b73df8755
+		summarizeBy: none
+		sourceColumn: special_item_class
+
+		annotation SummarizationSetBy = Automatic
+
+	column has_customer_key
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 68d9496f-a955-4b3b-a3dc-cba1ce2601d7
+		summarizeBy: none
+		sourceColumn: has_customer_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column has_product_key
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: ed43d952-4da0-4812-a209-08493ffab303
+		summarizeBy: none
+		sourceColumn: has_product_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column quantity
+		dataType: double
+		lineageTag: 6fdcd07d-32a7-4827-8390-6872208239a3
+		summarizeBy: sum
+		sourceColumn: quantity
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column unit_price
+		dataType: double
+		lineageTag: e8321ef5-b280-4933-b498-b48aa13ab76d
+		summarizeBy: sum
+		sourceColumn: unit_price
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column sales_amount
+		dataType: double
+		lineageTag: fb7c0b13-3ac7-4a7f-9def-3b2d0614f2d6
+		summarizeBy: sum
+		sourceColumn: sales_amount
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column sales_interpretation
+		dataType: string
+		lineageTag: 99e7e203-bbd0-4eb1-b7ef-f10ef227afe1
+		summarizeBy: none
+		sourceColumn: sales_interpretation
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'bi sales_line' = m
+		mode: import
+		source =
+				let
+			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+				    bi_sales_line = Source{[Schema="bi",Item="sales_line"]}[Data]
+				in
+				    bi_sales_line
+
+	annotation PBI_ResultType = Table

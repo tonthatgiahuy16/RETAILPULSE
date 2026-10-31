@@ -1,0 +1,126 @@
+table 'bi customer_cohort_retention'
+	lineageTag: 66305a7c-f67d-4b42-a3f5-bfeedaa6aa7b
+
+	measure 'Weighted retention rate' = ```
+			DIVIDE (
+				SUM ( 'bi customer_cohort_retention'[retained_customer_count] ),
+				SUM ( 'bi customer_cohort_retention'[cohort_customer_count] )
+			)
+			```
+		formatString: "0.0%"
+
+	column source_file_id
+		dataType: int64
+		formatString: 0
+		lineageTag: d3274ea4-ee35-449c-ae92-49d36843677c
+		summarizeBy: none
+		sourceColumn: source_file_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_sha256
+		dataType: string
+		lineageTag: e6ca907b-9b6f-4e4e-be8d-c3394597f85a
+		summarizeBy: none
+		sourceColumn: source_sha256
+
+		annotation SummarizationSetBy = Automatic
+
+	column cohort_month
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: e0ab22ad-1f3b-4166-8096-191681d3da30
+		summarizeBy: none
+		sourceColumn: cohort_month
+
+		variation Variation
+			isDefault
+			relationship: 437e1b48-9f52-46bd-b267-a18aff4e79c2
+			defaultHierarchy: LocalDateTable_aae1f25c-0622-42f6-b34a-74ef3d7aa1c2.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column activity_month
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 25e696bd-dd0d-4816-b610-3ec5ea66dd4a
+		summarizeBy: none
+		sourceColumn: activity_month
+
+		variation Variation
+			isDefault
+			relationship: 266d1700-1aba-4551-8900-7a4c3885ff22
+			defaultHierarchy: LocalDateTable_2fe01c87-a46b-4ce0-a615-8d4c30be6cce.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column months_since_cohort
+		dataType: int64
+		formatString: 0
+		lineageTag: 49a22a8e-6eb9-4354-82a6-f275267f1cf8
+		summarizeBy: sum
+		sourceColumn: months_since_cohort
+
+		annotation SummarizationSetBy = Automatic
+
+	column cohort_customer_count
+		dataType: int64
+		formatString: 0
+		lineageTag: e4bb409d-04d4-4614-a2b6-3290dec3171d
+		summarizeBy: sum
+		sourceColumn: cohort_customer_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column active_customer_count
+		dataType: int64
+		formatString: 0
+		lineageTag: 7580ffe5-083d-4f9c-b71c-95d828890254
+		summarizeBy: sum
+		sourceColumn: active_customer_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column retained_customer_count
+		dataType: int64
+		formatString: 0
+		lineageTag: 8594f6aa-ecba-4f1e-b665-c70439ca214f
+		summarizeBy: sum
+		sourceColumn: retained_customer_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column retention_rate
+		dataType: double
+		lineageTag: c04ba342-ea9a-47b4-b712-f4efb6fe8379
+		summarizeBy: sum
+		sourceColumn: retention_rate
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column customer_eligibility_interpretation
+		dataType: string
+		lineageTag: affefbff-2040-400d-8cb5-73c409f09b7d
+		summarizeBy: none
+		sourceColumn: customer_eligibility_interpretation
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'bi customer_cohort_retention' = m
+		mode: import
+		source =
+				let
+			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+				    bi_customer_cohort_retention = Source{[Schema="bi",Item="customer_cohort_retention"]}[Data]
+				in
+				    bi_customer_cohort_retention
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table

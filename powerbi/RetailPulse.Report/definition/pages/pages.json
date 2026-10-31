@@ -1,0 +1,9 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/pagesMetadata/1.1.0/schema.json",
+  "pageOrder": [
+    "retailpulse_overview",
+    "retailpulse_customer",
+    "retailpulse_quality"
+  ],
+  "activePageName": "retailpulse_overview"
+}

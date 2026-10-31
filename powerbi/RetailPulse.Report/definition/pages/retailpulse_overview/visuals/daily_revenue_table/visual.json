@@ -1,0 +1,103 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "daily_revenue_table",
+  "howCreated": "Default",
+  "position": {
+    "x": 1150,
+    "y": 270,
+    "z": 0,
+    "height": 420,
+    "width": 580
+  },
+  "visual": {
+    "visualType": "table",
+    "drillFilterOtherVisuals": true,
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi sales_daily"
+                    }
+                  },
+                  "Property": "event_date"
+                }
+              },
+              "queryRef": "event_date"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi sales_daily"
+                    }
+                  },
+                  "Property": "Gross sales amount"
+                }
+              },
+              "queryRef": "gross_sales_amount"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Function": 0,
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "bi sales_daily"
+                        }
+                      },
+                      "Property": "cancellation_signed_amount"
+                    }
+                  }
+                }
+              },
+              "queryRef": "cancellation_signed_amount"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi sales_daily"
+                    }
+                  },
+                  "Property": "Net transaction amount"
+                }
+              },
+              "queryRef": "net_transaction_amount"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Daily revenue reconciliation'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

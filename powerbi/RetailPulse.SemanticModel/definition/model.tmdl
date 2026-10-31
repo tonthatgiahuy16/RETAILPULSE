@@ -1,0 +1,35 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+	valueFilterBehavior: independent
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 1
+
+annotation PBI_QueryOrder = ["bi cancellation_diagnostic","bi customer_cohort_retention","bi customer_lifecycle_snapshot","bi sales_line","bi sales_daily","bi source_snapshot","bi repurchase_baseline_evaluation"]
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table 'bi cancellation_diagnostic'
+ref table 'bi customer_cohort_retention'
+ref table DateTableTemplate_54730599-3904-4f8a-9b32-731ba302d5ea
+ref table LocalDateTable_aae1f25c-0622-42f6-b34a-74ef3d7aa1c2
+ref table LocalDateTable_2fe01c87-a46b-4ce0-a615-8d4c30be6cce
+ref table 'bi customer_lifecycle_snapshot'
+ref table LocalDateTable_e5e89dfd-e7da-4026-80e5-c939b3235854
+ref table LocalDateTable_2db760cd-d422-4b66-962a-d380187f50b7
+ref table 'bi sales_line'
+ref table LocalDateTable_3e3faa90-12a7-4391-a356-128fc2e033f7
+ref table 'bi sales_daily'
+ref table LocalDateTable_109ef36c-dd45-41a2-b31b-5e344a500d01
+ref table 'bi source_snapshot'
+ref table LocalDateTable_58ea468c-996c-4157-a6b9-5ccc0189e10a
+ref table 'bi repurchase_baseline_evaluation'
+ref table LocalDateTable_6de4c7ec-ae59-4cde-91cc-ba6450b88c78
+ref table LocalDateTable_f8dd6cec-88af-49d1-b255-dda616be39b9
+ref table LocalDateTable_59688965-dc2e-42d7-8067-42342aed88dd
+
+ref cultureInfo en-US

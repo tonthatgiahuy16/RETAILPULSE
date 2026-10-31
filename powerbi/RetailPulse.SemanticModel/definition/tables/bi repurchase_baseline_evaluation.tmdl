@@ -1,0 +1,155 @@
+table 'bi repurchase_baseline_evaluation'
+	lineageTag: 1ad74031-eac5-481a-8f98-f24f6ae88341
+
+	column source_file_id
+		dataType: int64
+		formatString: 0
+		lineageTag: 33b7284b-10d5-4a79-8a1e-2dfb4b8f7874
+		summarizeBy: none
+		sourceColumn: source_file_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column observation_start_date
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: becd199d-fdef-4318-8ea7-73c98ef0d4c5
+		summarizeBy: none
+		sourceColumn: observation_start_date
+
+		variation Variation
+			isDefault
+			relationship: 1cdc1c7c-2f35-4405-9803-22b7fb25f6f1
+			defaultHierarchy: LocalDateTable_6de4c7ec-ae59-4cde-91cc-ba6450b88c78.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column prediction_start_date
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 34fa7698-7d70-4cf8-978f-ff89bd35bd0c
+		summarizeBy: none
+		sourceColumn: prediction_start_date
+
+		variation Variation
+			isDefault
+			relationship: 89ef99e7-3ef3-4f00-81d8-6893226deb91
+			defaultHierarchy: LocalDateTable_f8dd6cec-88af-49d1-b255-dda616be39b9.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column prediction_end_date
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 7b14e715-6455-4a4e-9161-759d6d2725c7
+		summarizeBy: none
+		sourceColumn: prediction_end_date
+
+		variation Variation
+			isDefault
+			relationship: 87aeeebd-c708-4184-87a0-2fae53cdef6e
+			defaultHierarchy: LocalDateTable_59688965-dc2e-42d7-8067-42342aed88dd.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column labeled_customer_count
+		dataType: int64
+		formatString: 0
+		lineageTag: ea1abb6a-4515-46e0-a2bc-d50f07740c37
+		summarizeBy: sum
+		sourceColumn: labeled_customer_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column actual_repurchase_customer_count
+		dataType: int64
+		formatString: 0
+		lineageTag: b7341efe-ee35-44d3-96bb-1c2a6b1f233b
+		summarizeBy: sum
+		sourceColumn: actual_repurchase_customer_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column predicted_repurchase_customer_count
+		dataType: int64
+		formatString: 0
+		lineageTag: baf8e5f8-45e7-47f1-8599-bac316df4f52
+		summarizeBy: sum
+		sourceColumn: predicted_repurchase_customer_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column true_positive_count
+		dataType: int64
+		formatString: 0
+		lineageTag: 1221dd5d-da70-4a4d-b17d-340c9f67e47b
+		summarizeBy: sum
+		sourceColumn: true_positive_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column correct_prediction_count
+		dataType: int64
+		formatString: 0
+		lineageTag: 3f14b9fa-b9ac-4153-b96a-08e46aa8bba3
+		summarizeBy: sum
+		sourceColumn: correct_prediction_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column accuracy
+		dataType: double
+		lineageTag: 27c477b3-53bf-4277-a383-648e8bec801c
+		summarizeBy: sum
+		sourceColumn: accuracy
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column precision
+		dataType: double
+		lineageTag: eae066b5-2fc5-4284-9105-3dd501b36b7f
+		summarizeBy: sum
+		sourceColumn: precision
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column recall
+		dataType: double
+		lineageTag: 5b299c8a-92ce-49af-a34a-7369723c4af5
+		summarizeBy: sum
+		sourceColumn: recall
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column label_interpretation
+		dataType: string
+		lineageTag: e838dafc-934e-44f1-938c-0711fdf10885
+		summarizeBy: none
+		sourceColumn: label_interpretation
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'bi repurchase_baseline_evaluation' = m
+		mode: import
+		source =
+				let
+			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+				    bi_repurchase_baseline_evaluation = Source{[Schema="bi",Item="repurchase_baseline_evaluation"]}[Data]
+				in
+				    bi_repurchase_baseline_evaluation
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table

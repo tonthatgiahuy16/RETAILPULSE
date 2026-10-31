@@ -1,0 +1,142 @@
+table 'bi sales_daily'
+	lineageTag: d82139a5-f291-45e3-a2b8-dcdffa7fcd61
+
+	measure 'Gross sales amount' = SUM ( 'bi sales_daily'[gross_sales_amount] )
+		formatString: #,0.00
+
+	measure 'Net transaction amount' = SUM ( 'bi sales_daily'[net_transaction_amount] )
+		formatString: #,0.00
+
+	measure 'Transaction rows' = SUM ( 'bi sales_daily'[transaction_row_count] )
+		formatString: #,0
+
+	measure 'Missing customer ID rows' = SUM ( 'bi sales_daily'[missing_customer_id_row_count] )
+		formatString: #,0
+
+	measure 'Missing customer ID share' = ```
+			DIVIDE (
+				[Missing customer ID rows],
+				[Transaction rows]
+			)
+			```
+		formatString: "0.0%"
+
+	column source_file_id
+		dataType: int64
+		formatString: 0
+		lineageTag: 4844bf4b-8282-400a-8212-122abb30193a
+		summarizeBy: none
+		sourceColumn: source_file_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_sha256
+		dataType: string
+		lineageTag: 1ea3d532-3395-44e6-b004-ecebbe8b3986
+		summarizeBy: none
+		sourceColumn: source_sha256
+
+		annotation SummarizationSetBy = Automatic
+
+	column event_date
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 3f67a3d1-59bf-4d5e-a018-67ba474599d5
+		summarizeBy: none
+		sourceColumn: event_date
+
+		variation Variation
+			isDefault
+			relationship: 371282a5-e00c-4d83-a280-c88787becd70
+			defaultHierarchy: LocalDateTable_109ef36c-dd45-41a2-b31b-5e344a500d01.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column gross_sales_amount
+		dataType: double
+		lineageTag: c4f34b76-da62-4b3b-aff5-e0a59b6edeb5
+		summarizeBy: sum
+		sourceColumn: gross_sales_amount
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column cancellation_signed_amount
+		dataType: double
+		lineageTag: 308ab16b-300c-4171-be0b-86da7aec8da9
+		summarizeBy: sum
+		sourceColumn: cancellation_signed_amount
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column net_transaction_amount
+		dataType: double
+		lineageTag: 3ea1fa6b-af90-41f4-b832-8f5a358739cb
+		summarizeBy: sum
+		sourceColumn: net_transaction_amount
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column transaction_row_count
+		dataType: int64
+		formatString: 0
+		lineageTag: f1d9e2c4-4e8c-4384-9fd0-eb0b6f4ff3a4
+		summarizeBy: sum
+		sourceColumn: transaction_row_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column missing_customer_id_row_count
+		dataType: int64
+		formatString: 0
+		lineageTag: ed681305-137e-42c5-8916-1c574e127468
+		summarizeBy: sum
+		sourceColumn: missing_customer_id_row_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column missing_customer_id_share
+		dataType: double
+		lineageTag: a6e5e466-699e-4edb-963e-16724592054d
+		summarizeBy: sum
+		sourceColumn: missing_customer_id_share
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column revenue_interpretation
+		dataType: string
+		lineageTag: 735cd665-2b8e-44b0-ae6a-bd47e7a376fd
+		summarizeBy: none
+		sourceColumn: revenue_interpretation
+
+		annotation SummarizationSetBy = Automatic
+
+	column cancellation_interpretation
+		dataType: string
+		lineageTag: 17e5d1b3-b558-43d4-bc3e-995d244d23b3
+		summarizeBy: none
+		sourceColumn: cancellation_interpretation
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'bi sales_daily' = m
+		mode: import
+		source =
+				let
+			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+				    bi_sales_daily = Source{[Schema="bi",Item="sales_daily"]}[Data]
+				in
+				    bi_sales_daily
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table

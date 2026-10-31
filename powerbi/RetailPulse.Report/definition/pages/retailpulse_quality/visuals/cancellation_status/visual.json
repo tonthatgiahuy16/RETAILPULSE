@@ -1,0 +1,76 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "cancellation_status",
+  "howCreated": "Default",
+  "position": {
+    "x": 900,
+    "y": 40,
+    "z": 0,
+    "height": 380,
+    "width": 830
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "drillFilterOtherVisuals": true,
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi cancellation_diagnostic"
+                    }
+                  },
+                  "Property": "candidate_status"
+                }
+              },
+              "queryRef": "candidate_status"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi cancellation_diagnostic"
+                    }
+                  },
+                  "Property": "Cancellation diagnostic rows"
+                }
+              },
+              "queryRef": "Cancellation diagnostic rows"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Cancellation candidate status \u2014 diagnostic only'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,80 @@
+table 'bi source_snapshot'
+	lineageTag: a81d8a8a-a123-4165-a956-01664366473c
+
+	column source_file_id
+		dataType: int64
+		formatString: 0
+		lineageTag: 9b8be46d-9263-4a25-89cb-203881942ffd
+		summarizeBy: none
+		sourceColumn: source_file_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_sha256
+		dataType: string
+		lineageTag: a01547b4-5867-4ad1-b75f-92a90749b5b6
+		summarizeBy: none
+		sourceColumn: source_sha256
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_retrieved_at
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: e3dec522-4a82-4171-99e3-7bbbcecb8ff6
+		summarizeBy: none
+		sourceColumn: source_retrieved_at
+
+		variation Variation
+			isDefault
+			relationship: f9a0e879-cb95-4b2a-8025-0ca49972e108
+			defaultHierarchy: LocalDateTable_58ea468c-996c-4157-a6b9-5ccc0189e10a.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_uri
+		dataType: string
+		lineageTag: d974eed1-5ccc-4e83-9eed-cbb79e81c34b
+		summarizeBy: none
+		sourceColumn: source_uri
+
+		annotation SummarizationSetBy = Automatic
+
+	column original_filename
+		dataType: string
+		lineageTag: 803448f9-9049-46c1-a548-d4dcbd836800
+		summarizeBy: none
+		sourceColumn: original_filename
+
+		annotation SummarizationSetBy = Automatic
+
+	column byte_size
+		dataType: int64
+		formatString: 0
+		lineageTag: 9d86033f-6da7-4875-830e-c869e9c81598
+		summarizeBy: sum
+		sourceColumn: byte_size
+
+		annotation SummarizationSetBy = Automatic
+
+	column expected_row_count
+		dataType: int64
+		formatString: 0
+		lineageTag: 9ef0f026-9563-443a-a65b-8543218e42b8
+		summarizeBy: sum
+		sourceColumn: expected_row_count
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'bi source_snapshot' = m
+		mode: import
+		source =
+				let
+			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+				    bi_source_snapshot = Source{[Schema="bi",Item="source_snapshot"]}[Data]
+				in
+				    bi_source_snapshot
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table

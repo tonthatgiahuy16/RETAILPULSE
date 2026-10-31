@@ -1,0 +1,116 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "snapshot_table",
+  "howCreated": "Default",
+  "position": {
+    "x": 900,
+    "y": 480,
+    "z": 0,
+    "height": 320,
+    "width": 830
+  },
+  "visual": {
+    "visualType": "table",
+    "drillFilterOtherVisuals": true,
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi source_snapshot"
+                    }
+                  },
+                  "Property": "source_file_id"
+                }
+              },
+              "queryRef": "source_file_id"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi source_snapshot"
+                    }
+                  },
+                  "Property": "source_retrieved_at"
+                }
+              },
+              "queryRef": "source_retrieved_at"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi source_snapshot"
+                    }
+                  },
+                  "Property": "original_filename"
+                }
+              },
+              "queryRef": "original_filename"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Function": 0,
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "bi source_snapshot"
+                        }
+                      },
+                      "Property": "expected_row_count"
+                    }
+                  }
+                }
+              },
+              "queryRef": "expected_row_count"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi source_snapshot"
+                    }
+                  },
+                  "Property": "source_sha256"
+                }
+              },
+              "queryRef": "source_sha256"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Source snapshot metadata'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

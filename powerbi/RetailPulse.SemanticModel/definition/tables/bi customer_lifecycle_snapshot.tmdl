@@ -1,0 +1,196 @@
+table 'bi customer_lifecycle_snapshot'
+	lineageTag: 978098c9-e21f-47c9-a108-e5bb610727df
+
+	measure Customers = DISTINCTCOUNT ( 'bi customer_lifecycle_snapshot'[customer_id] )
+		formatString: #,0
+
+	measure 'Illustrative capacity customers' = ```
+			CALCULATE (
+				[Customers],
+				'bi customer_lifecycle_snapshot'[is_within_illustrative_budget] = TRUE ()
+			)
+			```
+		formatString: "#,0"
+
+	column source_file_id
+		dataType: int64
+		formatString: 0
+		lineageTag: fc6b52da-ef02-47f9-bd11-4181fefae2a7
+		summarizeBy: none
+		sourceColumn: source_file_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_sha256
+		dataType: string
+		lineageTag: 33a3710a-ee58-4181-b457-2ffbe1f50174
+		summarizeBy: none
+		sourceColumn: source_sha256
+
+		annotation SummarizationSetBy = Automatic
+
+	column as_of_date
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: fbb53c58-d668-4335-865b-6c40aef2f362
+		summarizeBy: none
+		sourceColumn: as_of_date
+
+		variation Variation
+			isDefault
+			relationship: 64741d45-f061-4dd4-b712-479a81b06ad8
+			defaultHierarchy: LocalDateTable_e5e89dfd-e7da-4026-80e5-c939b3235854.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column customer_id
+		dataType: string
+		lineageTag: 9af5cd56-0c4b-4c15-bf09-e5dca4bf7f91
+		summarizeBy: none
+		sourceColumn: customer_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column primary_country
+		dataType: string
+		lineageTag: fb996795-8e49-45fc-94c1-3ccfc569e3ae
+		summarizeBy: none
+		sourceColumn: primary_country
+
+		annotation SummarizationSetBy = Automatic
+
+	column recency_days
+		dataType: int64
+		formatString: 0
+		lineageTag: dc179d36-577a-445e-9671-96ec22a389d1
+		summarizeBy: sum
+		sourceColumn: recency_days
+
+		annotation SummarizationSetBy = Automatic
+
+	column frequency
+		dataType: int64
+		formatString: 0
+		lineageTag: bfe28f95-0c7c-429a-a2e8-6e5d6cf4a476
+		summarizeBy: sum
+		sourceColumn: frequency
+
+		annotation SummarizationSetBy = Automatic
+
+	column monetary_amount
+		dataType: double
+		lineageTag: 0e8253f1-7329-4e9a-83b4-2ed2b16ca0eb
+		summarizeBy: sum
+		sourceColumn: monetary_amount
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column last_purchase_at
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 8f5e6fff-91de-4a54-b43c-e4310cfa0976
+		summarizeBy: none
+		sourceColumn: last_purchase_at
+
+		variation Variation
+			isDefault
+			relationship: bee69155-7313-4c86-ab64-e4cdba0718ef
+			defaultHierarchy: LocalDateTable_2db760cd-d422-4b66-962a-d380187f50b7.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+	column priority_segment
+		dataType: string
+		lineageTag: 7c0ebb0e-04ef-45e2-8323-dde112d41ee2
+		summarizeBy: none
+		sourceColumn: priority_segment
+
+		annotation SummarizationSetBy = Automatic
+
+	column priority_rank
+		dataType: int64
+		formatString: 0
+		lineageTag: 16968f49-6816-433e-a6fb-e8885a0ed364
+		summarizeBy: sum
+		sourceColumn: priority_rank
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_within_illustrative_budget
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 782ff34b-d4ac-4573-9332-75987c1228b9
+		summarizeBy: none
+		sourceColumn: is_within_illustrative_budget
+
+		annotation SummarizationSetBy = Automatic
+
+	column scenario_id
+		dataType: string
+		lineageTag: 9c3718c5-403f-42ba-a22e-a7e867d93bf1
+		summarizeBy: none
+		sourceColumn: scenario_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column budget_campaign_units
+		dataType: double
+		lineageTag: 6405d4ab-2765-48ae-9bb0-68bbebd092e5
+		summarizeBy: sum
+		sourceColumn: budget_campaign_units
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column cost_per_contact_units
+		dataType: double
+		lineageTag: 78102279-4be3-4701-8cf4-7ac7b788bdbd
+		summarizeBy: sum
+		sourceColumn: cost_per_contact_units
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column contact_capacity
+		dataType: int64
+		formatString: 0
+		lineageTag: 0e880675-0c5d-49aa-ae6a-4a0e1742d842
+		summarizeBy: sum
+		sourceColumn: contact_capacity
+
+		annotation SummarizationSetBy = Automatic
+
+	column decision_interpretation
+		dataType: string
+		lineageTag: 6456b2c1-01ed-44dd-8e7e-1cd4c8b7e63e
+		summarizeBy: none
+		sourceColumn: decision_interpretation
+
+		annotation SummarizationSetBy = Automatic
+
+	column model_interpretation
+		dataType: string
+		lineageTag: 7cb76c91-7d29-4c31-927f-183300733770
+		summarizeBy: none
+		sourceColumn: model_interpretation
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'bi customer_lifecycle_snapshot' = m
+		mode: import
+		source =
+				let
+			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+				    bi_customer_lifecycle_snapshot = Source{[Schema="bi",Item="customer_lifecycle_snapshot"]}[Data]
+				in
+				    bi_customer_lifecycle_snapshot
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table

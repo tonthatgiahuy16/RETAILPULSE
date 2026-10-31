@@ -1,0 +1,76 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "retention",
+  "howCreated": "Default",
+  "position": {
+    "x": 780,
+    "y": 270,
+    "z": 0,
+    "height": 400,
+    "width": 950
+  },
+  "visual": {
+    "visualType": "lineChart",
+    "drillFilterOtherVisuals": true,
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi customer_cohort_retention"
+                    }
+                  },
+                  "Property": "months_since_cohort"
+                }
+              },
+              "queryRef": "months_since_cohort"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi customer_cohort_retention"
+                    }
+                  },
+                  "Property": "Weighted retention rate"
+                }
+              },
+              "queryRef": "Weighted retention"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Weighted cohort retention by months since cohort'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
