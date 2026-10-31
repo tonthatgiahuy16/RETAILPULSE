@@ -50,9 +50,16 @@ python scripts/run_pipeline.py `
 
 The runner records each applied migration and its SHA-256 in `ops.schema_migration`, refuses migration drift, then runs SQL publish gates after ingestion. The loader first materializes a private copy of the workbook and hashes that exact copy; it serializes same-hash attempts with a PostgreSQL advisory lock, then inserts the source manifest, raw rows, and `SUCCEEDED` state in one transaction. A repeat of the same SHA-256 creates a `SKIPPED_ALREADY_LOADED` audit batch and no new raw rows. The command output is evidence for one run only; inspect the reported count and database reconciliation before treating the raw snapshot as published.
 
+## Repurchase model evaluation
+
+The optional model command builds rolling temporal examples from published
+customer events, evaluates Logistic Regression against the frequency rule, and
+writes a local JSON report. It does not publish scores or claim uplift/ROI.
+See [Repurchase model evaluation](docs/architecture/REPURCHASE_MODEL_EVALUATION.md).
+
 ## Not yet implemented
 
-- production predictive model and Airflow
+- production scoring service and Airflow
 
 ## dbt contract checks
 
