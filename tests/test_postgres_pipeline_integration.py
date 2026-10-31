@@ -136,6 +136,7 @@ class PostgresPipelineIntegrationTests(unittest.TestCase):
         try:
             apply_migrations(connection, PROJECT_ROOT / "migrations")
             with connection.cursor() as cursor:
+                cursor.execute("drop view bi.customer_cohort_retention")
                 cursor.execute("drop view mart.customer_cohort_retention")
                 cursor.execute("drop view mart.customer_purchase_event cascade")
                 cursor.execute(
