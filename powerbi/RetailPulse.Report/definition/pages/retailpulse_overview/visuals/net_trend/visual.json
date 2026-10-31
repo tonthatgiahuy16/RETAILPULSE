@@ -1,0 +1,76 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "net_trend",
+  "howCreated": "Default",
+  "position": {
+    "x": 40,
+    "y": 270,
+    "z": 0,
+    "height": 420,
+    "width": 1080
+  },
+  "visual": {
+    "visualType": "lineChart",
+    "drillFilterOtherVisuals": true,
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi sales_daily"
+                    }
+                  },
+                  "Property": "event_date"
+                }
+              },
+              "queryRef": "event_date"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi sales_daily"
+                    }
+                  },
+                  "Property": "Net transaction amount"
+                }
+              },
+              "queryRef": "Net transaction"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Event-date net transaction amount (not accounting revenue)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
