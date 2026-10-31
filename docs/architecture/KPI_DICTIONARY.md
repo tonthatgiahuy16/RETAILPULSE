@@ -168,6 +168,25 @@ The model's rolling examples use 180 observation days and 90 prediction days.
 Earlier non-overlapping cutoffs train; the final cutoff must exactly match
 `mart.customer_repurchase_label_dataset`. See [Repurchase model evaluation](REPURCHASE_MODEL_EVALUATION.md).
 
+## Power BI consumption boundary
+
+**Schema:** `bi`. Power BI consumers use the semantic views in this schema,
+not `raw`, `stg`, `int`, `ops`, `mart`, `dw`, or `decision`. Each BI relation
+keeps its source snapshot identifier; report-level totals must be scoped to
+one `source_file_id` unless a documented comparison requires otherwise.
+
+| BI relation | KPI family | Grain | Limit |
+|---|---|---|---|
+| `bi.sales_daily` | Revenue and Customer-ID coverage | Source snapshot × event date | Same definitions and event-date/accounting limitation as `mart.revenue_daily`. |
+| `bi.sales_line` | Product, country, time sales analysis | One `SALE` source row | Missing Customer ID stays present; cancellation rows are excluded. |
+| `bi.customer_lifecycle_snapshot` | RFM and current priority segment | Source snapshot × as-of date × customer | Descriptive rule, not a propensity score; capacity is illustrative only. |
+| `bi.customer_cohort_retention` | Cohort retention | Source snapshot × cohort month × activity month | Customer-event eligibility only; zero-retention months are retained. |
+| `bi.cancellation_diagnostic` | Cancellation candidate counts | Source snapshot × candidate status | Candidate diagnostics are not return-accounting facts. |
+| `bi.repurchase_baseline_evaluation` | Label-baseline evaluation | Source snapshot × observation/prediction windows | Historical label result, not campaign response, uplift, or ROI. |
+
+See [Power BI semantic layer](POWER_BI_SEMANTIC_LAYER.md) for the view
+contracts, role provisioning, and refresh evidence boundary.
+
 Inspect `ops.schema_migration`, `ops.ingestion_batch`, and the exact runner
 output for runtime status. This dictionary defines semantics; it is not itself
 evidence that a database refresh has run.

@@ -67,7 +67,7 @@ run in another environment.
 | Operations | Checksum migration ledger, runner, SQL gates, and integration CI configuration | Implemented |
 | dbt | Adapter views and contract tests over PostgreSQL staging and mart relations | Implemented |
 | Customer analytics | Candidate-only cancellation diagnostics, customer purchase events, RFM, repurchase label baseline, and cohort retention | Implemented |
-| Dashboard | Static, read-only verified snapshot dashboard | Implemented |
+| Dashboard and BI consumption | Static dashboard plus a PostgreSQL `bi` semantic layer; Power BI report/gateway runtime evidence remains pending | Semantic layer implemented in code; runtime evidence pending |
 | Dimensional warehouse | Snapshot-scoped customer, product, and date dimensions plus a lineage-preserving sales-line fact | Implemented in code; runtime evidence pending |
 | Decision and ML | Rule-based RFM priority contract plus temporal Logistic Regression evaluation; score publication and production scoring remain planned | Model evaluation implemented in code; runtime evidence pending |
 | Orchestration | Airflow DAG and backfill operations | Planned |

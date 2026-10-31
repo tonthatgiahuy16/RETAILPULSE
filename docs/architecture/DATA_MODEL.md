@@ -1,8 +1,9 @@
 # RetailPulse data model
 
 This is the current PostgreSQL contract model. `raw` is the durable immutable
-source of truth. `stg`, `int`, `mart`, `dw`, and `decision` are derived views
-or refreshable materialized projections; none replace raw lineage.
+source of truth. `stg`, `int`, `mart`, `dw`, `decision`, and the read-only
+`bi` semantic layer are derived views or refreshable materialized projections;
+none replace raw lineage.
 
 ## ERD
 
@@ -37,6 +38,13 @@ erDiagram
     MART_CUSTOMER_REPURCHASE_LABEL_DATASET ||--|| DECISION_CUSTOMER_PRIORITY_BACKTEST : "temporal outcome only"
     DW_DIM_CUSTOMER ||--o{ DECISION_CUSTOMER_PRIORITY_SNAPSHOT : "primary country logical join"
     DW_DIM_CUSTOMER ||--o{ DECISION_CUSTOMER_PRIORITY_BACKTEST : "primary country logical join"
+    OPS_SOURCE_FILE ||--o{ BI_SOURCE_SNAPSHOT : "successful snapshot projection"
+    MART_REVENUE_DAILY ||--o{ BI_SALES_DAILY : "thin semantic projection"
+    DW_FCT_SALES_LINE ||--o{ BI_SALES_LINE : "thin semantic projection"
+    DECISION_CUSTOMER_PRIORITY_SNAPSHOT ||--o{ BI_CUSTOMER_LIFECYCLE_SNAPSHOT : "thin semantic projection"
+    MART_CUSTOMER_COHORT_RETENTION ||--o{ BI_CUSTOMER_COHORT_RETENTION : "thin semantic projection"
+    INT_CANCELLATION_MATCH_RESOLUTION ||--o{ BI_CANCELLATION_DIAGNOSTIC : "status aggregate"
+    MART_CUSTOMER_REPURCHASE_BASELINE_EVALUATION ||--o{ BI_REPURCHASE_BASELINE_EVALUATION : "thin semantic projection"
 
     OPS_SOURCE_FILE {
         bigint source_file_id PK
@@ -181,6 +189,13 @@ erDiagram
 | `dw.fct_sales_line` | Materialized view | One `SALE` staging source row | Lineage-preserving sales fact; nullable customer/product keys are retained. |
 | `decision.customer_priority_snapshot` | View | Source snapshot × RFM as-of date × customer | Descriptive RFM segment and capacity rank; no outcome label. |
 | `decision.customer_priority_backtest` | View | Source snapshot × observed customer | Observation-only features, segment/rank, country, and historical repurchase label. |
+| `bi.source_snapshot` | View | Successfully ingested source snapshot | Safe snapshot filter and label for Power BI. |
+| `bi.sales_daily` | View | Source snapshot × event date | Revenue semantic projection with interpretation labels. |
+| `bi.sales_line` | View | One `SALE` source row | Fact/dimension projection for product, country, and time visuals. |
+| `bi.customer_lifecycle_snapshot` | View | Source snapshot × as-of date × customer | RFM/priority semantic projection; not a model score. |
+| `bi.customer_cohort_retention` | View | Source snapshot × cohort month × activity month | Cohort semantic projection. |
+| `bi.cancellation_diagnostic` | View | Source snapshot × candidate status | Candidate-only diagnostic aggregate. |
+| `bi.repurchase_baseline_evaluation` | View | Source snapshot × temporal label window | Historical baseline semantic projection. |
 
 ## Boundaries
 
@@ -196,6 +211,11 @@ erDiagram
    customer-event, and dimensional materialized snapshots after successful
    ingestion and before SQL gates. Their dependent views reflect that snapshot
    state.
+6. Power BI receives `SELECT` only on `bi` views through a dedicated login.
+   It has no direct `SELECT` access to source, raw, operational, staging, or
+   intermediate schemas. The revenue view needs technical `USAGE` on `stg`
+   because PostgreSQL may inline typed conversion functions; this does not
+   permit reading staging relations.
 
 See [Dimensional warehouse](DIMENSIONAL_WAREHOUSE.md) and [Customer priority
 decision](CUSTOMER_PRIORITY_DECISION.md) for keys, business rules, and limits.

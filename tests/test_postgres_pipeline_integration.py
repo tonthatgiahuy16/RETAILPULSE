@@ -254,6 +254,7 @@ class PostgresPipelineIntegrationTests(unittest.TestCase):
                 [
                     PROJECT_ROOT / "tests" / "sql" / "018_dimensional_warehouse.sql",
                     PROJECT_ROOT / "tests" / "sql" / "019_customer_priority_decision.sql",
+                    PROJECT_ROOT / "tests" / "sql" / "020_powerbi_semantic_layer.sql",
                 ],
             )
 
@@ -304,6 +305,21 @@ class PostgresPipelineIntegrationTests(unittest.TestCase):
                     """
                 )
                 backtest_rows = cursor.fetchall()
+                cursor.execute(
+                    """
+                    select count(*), count(*) filter (where customer_id is null),
+                           count(*) filter (where special_item_class = 'SERVICE_OR_FEE')
+                    from bi.sales_line
+                    """
+                )
+                bi_sales_line_counts = cursor.fetchone()
+                cursor.execute(
+                    """
+                    select customer_id, priority_segment, decision_interpretation, model_interpretation
+                    from bi.customer_lifecycle_snapshot
+                    """
+                )
+                bi_lifecycle_rows = cursor.fetchall()
         finally:
             connection.close()
 
@@ -316,5 +332,18 @@ class PostgresPipelineIntegrationTests(unittest.TestCase):
             backtest_rows,
             [("customer-a", 1, True, "BACKTEST_OUTCOME_ONLY_NOT_CAUSAL_RESPONSE")],
         )
+        self.assertEqual(bi_sales_line_counts, (4, 2, 1))
+        self.assertEqual(
+            bi_lifecycle_rows,
+            [
+                (
+                    "customer-a",
+                    "CHAMPIONS",
+                    "CURRENT_DESCRIPTIVE_SEGMENT_NOT_PREDICTIVE_SCORE",
+                    "DESCRIPTIVE_RFM_SEGMENT_NOT_A_PROPENSITY_SCORE",
+                )
+            ],
+        )
         self.assertIn("018_dimensional_warehouse.sql", checks)
         self.assertIn("019_customer_priority_decision.sql", checks)
+        self.assertIn("020_powerbi_semantic_layer.sql", checks)
