@@ -20,6 +20,13 @@ Slices 5 and 6 added a checksum-backed migration ledger, serialized migration ru
 
 Slices 7–10 add candidate-only cancellation diagnostics, customer purchase events, data-derived RFM snapshots, and a leakage-safe repurchase-label baseline. They do not turn a cancellation candidate into an accounting return, net candidate cancellations from revenue, or claim campaign uplift/ROI.
 
+Slice 15 adds a snapshot-aware, read-only `bi` semantic layer for Power BI.
+Migration 020 was applied to the local development database on 2026-10-31;
+direct PostgreSQL queries returned 604 daily revenue rows, 1,047,877 sales-line
+rows, 5,878 customer-lifecycle rows, and 325 cohort-retention rows. A dedicated
+Power BI login, report, gateway, and refresh evidence are deliberately separate
+administrator/report-author steps and are not stored in this repository.
+
 ## Slice 1 contract
 
 The input is an immutable source file. Its SHA-256 hash identifies its content. The same hash must not create a second raw copy. Raw rows retain their source sheet and row number; business-level duplicates are not removed at raw ingestion.
@@ -56,6 +63,16 @@ The optional model command builds rolling temporal examples from published
 customer events, evaluates Logistic Regression against the frequency rule, and
 writes a local JSON report. It does not publish scores or claim uplift/ROI.
 See [Repurchase model evaluation](docs/architecture/REPURCHASE_MODEL_EVALUATION.md).
+
+## Power BI semantic layer
+
+After the pipeline has published a source snapshot, connect Power BI only to
+the read-only `bi` schema. It provides snapshot-aware sales, customer
+lifecycle, cohort, cancellation-diagnostic, and baseline-evaluation views;
+it does not expose raw data or create a Power BI login automatically. See
+[Power BI semantic layer](docs/architecture/POWER_BI_SEMANTIC_LAYER.md) for
+least-privilege provisioning, Import-mode connection steps, KPI reconciliation,
+and reporting limits.
 
 ## Not yet implemented
 

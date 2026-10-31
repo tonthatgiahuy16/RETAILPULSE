@@ -14,6 +14,12 @@ Migration 006 replaces the reconciliation view without changing its columns or g
 
 SQL gates run only after migrations and optional ingestion. They execute inside a transaction that is rolled back after success, so checks do not leave durable state. A failed gate also rolls back its check transaction and exits non-zero; it does not claim the snapshot published.
 
+Migration 020 adds read-only `bi` semantic views for Power BI. Gate 020 proves
+that these views remain snapshot-aware projections of their published sources;
+it does not create a login or prove a Power BI refresh. See [Power BI semantic
+layer](POWER_BI_SEMANTIC_LAYER.md) for least-privilege provisioning and the
+separate refresh-evidence boundary.
+
 ## File identity during ingestion
 
 Before the workbook is parsed, the loader copies it once to a private temporary file while calculating SHA-256. It validates and streams only that copy, and stores that copy's filename metadata, byte size, and hash in `ops.source_file`. Therefore the hash identifies the exact bytes that supplied `raw.online_retail_line`, even if the original path is replaced after copying. A malformed or partial temporary copy fails validation before raw writes, leaving the existing `FAILED` batch audit behavior intact.
