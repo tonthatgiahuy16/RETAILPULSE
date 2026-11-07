@@ -13,13 +13,12 @@ table 'bi sales_daily'
 	measure 'Missing customer ID rows' = SUM ( 'bi sales_daily'[missing_customer_id_row_count] )
 		formatString: #,0
 
-	measure 'Missing customer ID share' = ```
+	measure 'Missing customer ID share' =
 			DIVIDE (
 				[Missing customer ID rows],
 				[Transaction rows]
 			)
-			```
-		formatString: "0.0%"
+		formatString: 0.0%
 
 	column source_file_id
 		dataType: int64
@@ -131,11 +130,11 @@ table 'bi sales_daily'
 	partition 'bi sales_daily' = m
 		mode: import
 		source =
-				let
-			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
-				    bi_sales_daily = Source{[Schema="bi",Item="sales_daily"]}[Data]
-				in
-				    bi_sales_daily
+					let
+				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+					    bi_sales_daily = Source{[Schema="bi",Item="sales_daily"]}[Data]
+					in
+					    bi_sales_daily
 
 	annotation PBI_NavigationStepName = Navigation
 

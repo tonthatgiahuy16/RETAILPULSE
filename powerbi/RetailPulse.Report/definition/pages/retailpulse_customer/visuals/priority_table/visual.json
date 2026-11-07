@@ -1,17 +1,15 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "priority_table",
-  "howCreated": "Default",
   "position": {
     "x": 40,
-    "y": 720,
+    "y": 680,
     "z": 0,
-    "height": 290,
-    "width": 1690
+    "height": 360,
+    "width": 1840
   },
   "visual": {
-    "visualType": "table",
-    "drillFilterOtherVisuals": true,
+    "visualType": "tableEx",
     "query": {
       "queryState": {
         "Values": {
@@ -27,7 +25,7 @@
                   "Property": "customer_id"
                 }
               },
-              "queryRef": "customer_id"
+              "queryRef": "Customer ID"
             },
             {
               "field": {
@@ -40,7 +38,7 @@
                   "Property": "primary_country"
                 }
               },
-              "queryRef": "primary_country"
+              "queryRef": "Country"
             },
             {
               "field": {
@@ -53,12 +51,11 @@
                   "Property": "priority_segment"
                 }
               },
-              "queryRef": "priority_segment"
+              "queryRef": "Segment"
             },
             {
               "field": {
                 "Aggregation": {
-                  "Function": 0,
                   "Expression": {
                     "Column": {
                       "Expression": {
@@ -68,15 +65,15 @@
                       },
                       "Property": "frequency"
                     }
-                  }
+                  },
+                  "Function": 0
                 }
               },
-              "queryRef": "frequency"
+              "queryRef": "Frequency"
             },
             {
               "field": {
                 "Aggregation": {
-                  "Function": 0,
                   "Expression": {
                     "Column": {
                       "Expression": {
@@ -86,15 +83,15 @@
                       },
                       "Property": "monetary_amount"
                     }
-                  }
+                  },
+                  "Function": 0
                 }
               },
-              "queryRef": "monetary_amount"
+              "queryRef": "Monetary amount"
             },
             {
               "field": {
                 "Aggregation": {
-                  "Function": 0,
                   "Expression": {
                     "Column": {
                       "Expression": {
@@ -104,10 +101,11 @@
                       },
                       "Property": "priority_rank"
                     }
-                  }
+                  },
+                  "Function": 0
                 }
               },
-              "queryRef": "priority_rank"
+              "queryRef": "Priority rank"
             },
             {
               "field": {
@@ -120,7 +118,7 @@
                   "Property": "is_within_illustrative_budget"
                 }
               },
-              "queryRef": "is_within_illustrative_budget"
+              "queryRef": "Within illustrative budget"
             }
           ]
         }
@@ -140,13 +138,14 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Customer-priority detail \u2014 descriptive, not propensity scoring'"
+                  "Value": "'Customer-priority detail — descriptive, not propensity scoring'"
                 }
               }
             }
           }
         }
       ]
-    }
+    },
+    "drillFilterOtherVisuals": true
   }
 }

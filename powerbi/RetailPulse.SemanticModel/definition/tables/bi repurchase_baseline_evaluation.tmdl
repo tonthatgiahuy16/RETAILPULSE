@@ -1,6 +1,27 @@
 table 'bi repurchase_baseline_evaluation'
 	lineageTag: 1ad74031-eac5-481a-8f98-f24f6ae88341
 
+	measure 'Baseline precision' =
+			DIVIDE (
+				SUM ( 'bi repurchase_baseline_evaluation'[true_positive_count] ),
+				SUM ( 'bi repurchase_baseline_evaluation'[predicted_repurchase_customer_count] )
+			)
+		formatString: 0.0%
+
+	measure 'Baseline recall' =
+			DIVIDE (
+				SUM ( 'bi repurchase_baseline_evaluation'[true_positive_count] ),
+				SUM ( 'bi repurchase_baseline_evaluation'[actual_repurchase_customer_count] )
+			)
+		formatString: 0.0%
+
+	measure 'Baseline accuracy' =
+			DIVIDE (
+				SUM ( 'bi repurchase_baseline_evaluation'[correct_prediction_count] ),
+				SUM ( 'bi repurchase_baseline_evaluation'[labeled_customer_count] )
+			)
+		formatString: 0.0%
+
 	column source_file_id
 		dataType: int64
 		formatString: 0
@@ -144,11 +165,11 @@ table 'bi repurchase_baseline_evaluation'
 	partition 'bi repurchase_baseline_evaluation' = m
 		mode: import
 		source =
-				let
-			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
-				    bi_repurchase_baseline_evaluation = Source{[Schema="bi",Item="repurchase_baseline_evaluation"]}[Data]
-				in
-				    bi_repurchase_baseline_evaluation
+					let
+				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+					    bi_repurchase_baseline_evaluation = Source{[Schema="bi",Item="repurchase_baseline_evaluation"]}[Data]
+					in
+					    bi_repurchase_baseline_evaluation
 
 	annotation PBI_NavigationStepName = Navigation
 

@@ -1,17 +1,15 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "snapshot_table",
-  "howCreated": "Default",
   "position": {
-    "x": 900,
-    "y": 480,
+    "x": 964,
+    "y": 680,
     "z": 0,
-    "height": 320,
-    "width": 830
+    "height": 360,
+    "width": 916
   },
   "visual": {
-    "visualType": "table",
-    "drillFilterOtherVisuals": true,
+    "visualType": "tableEx",
     "query": {
       "queryState": {
         "Values": {
@@ -27,7 +25,7 @@
                   "Property": "source_file_id"
                 }
               },
-              "queryRef": "source_file_id"
+              "queryRef": "Snapshot ID"
             },
             {
               "field": {
@@ -40,7 +38,7 @@
                   "Property": "source_retrieved_at"
                 }
               },
-              "queryRef": "source_retrieved_at"
+              "queryRef": "Retrieved at"
             },
             {
               "field": {
@@ -53,12 +51,11 @@
                   "Property": "original_filename"
                 }
               },
-              "queryRef": "original_filename"
+              "queryRef": "Original file"
             },
             {
               "field": {
                 "Aggregation": {
-                  "Function": 0,
                   "Expression": {
                     "Column": {
                       "Expression": {
@@ -68,10 +65,11 @@
                       },
                       "Property": "expected_row_count"
                     }
-                  }
+                  },
+                  "Function": 0
                 }
               },
-              "queryRef": "expected_row_count"
+              "queryRef": "Expected rows"
             },
             {
               "field": {
@@ -84,7 +82,7 @@
                   "Property": "source_sha256"
                 }
               },
-              "queryRef": "source_sha256"
+              "queryRef": "SHA-256"
             }
           ]
         }
@@ -111,6 +109,7 @@
           }
         }
       ]
-    }
+    },
+    "drillFilterOtherVisuals": true
   }
 }

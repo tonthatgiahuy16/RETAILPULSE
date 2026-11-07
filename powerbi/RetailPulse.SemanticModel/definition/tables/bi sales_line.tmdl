@@ -211,10 +211,10 @@ table 'bi sales_line'
 	partition 'bi sales_line' = m
 		mode: import
 		source =
-				let
-			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
-				    bi_sales_line = Source{[Schema="bi",Item="sales_line"]}[Data]
-				in
-				    bi_sales_line
+					let
+				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+					    bi_sales_line = Source{[Schema="bi",Item="sales_line"]}[Data]
+					in
+					    bi_sales_line
 
 	annotation PBI_ResultType = Table

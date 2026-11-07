@@ -4,55 +4,46 @@ relationship 437e1b48-9f52-46bd-b267-a18aff4e79c2
 	toColumn: LocalDateTable_aae1f25c-0622-42f6-b34a-74ef3d7aa1c2.Date
 
 relationship 266d1700-1aba-4551-8900-7a4c3885ff22
-
 	joinOnDateBehavior: datePartOnly
 	fromColumn: 'bi customer_cohort_retention'.activity_month
 	toColumn: LocalDateTable_2fe01c87-a46b-4ce0-a615-8d4c30be6cce.Date
 
 relationship 64741d45-f061-4dd4-b712-479a81b06ad8
-
 	joinOnDateBehavior: datePartOnly
 	fromColumn: 'bi customer_lifecycle_snapshot'.as_of_date
 	toColumn: LocalDateTable_e5e89dfd-e7da-4026-80e5-c939b3235854.Date
 
 relationship bee69155-7313-4c86-ab64-e4cdba0718ef
-
 	joinOnDateBehavior: datePartOnly
 	fromColumn: 'bi customer_lifecycle_snapshot'.last_purchase_at
 	toColumn: LocalDateTable_2db760cd-d422-4b66-962a-d380187f50b7.Date
 
 relationship 809b5d11-495f-4d63-8744-267fcb2f895a
-
 	joinOnDateBehavior: datePartOnly
 	fromColumn: 'bi sales_line'.calendar_date
 	toColumn: LocalDateTable_3e3faa90-12a7-4391-a356-128fc2e033f7.Date
 
 relationship 371282a5-e00c-4d83-a280-c88787becd70
-
 	joinOnDateBehavior: datePartOnly
 	fromColumn: 'bi sales_daily'.event_date
 	toColumn: LocalDateTable_109ef36c-dd45-41a2-b31b-5e344a500d01.Date
 
 relationship f9a0e879-cb95-4b2a-8025-0ca49972e108
-
 	joinOnDateBehavior: datePartOnly
 	fromColumn: 'bi source_snapshot'.source_retrieved_at
 	toColumn: LocalDateTable_58ea468c-996c-4157-a6b9-5ccc0189e10a.Date
 
 relationship 1cdc1c7c-2f35-4405-9803-22b7fb25f6f1
-
 	joinOnDateBehavior: datePartOnly
 	fromColumn: 'bi repurchase_baseline_evaluation'.observation_start_date
 	toColumn: LocalDateTable_6de4c7ec-ae59-4cde-91cc-ba6450b88c78.Date
 
 relationship 89ef99e7-3ef3-4f00-81d8-6893226deb91
-
 	joinOnDateBehavior: datePartOnly
 	fromColumn: 'bi repurchase_baseline_evaluation'.prediction_start_date
 	toColumn: LocalDateTable_f8dd6cec-88af-49d1-b255-dda616be39b9.Date
 
 relationship 87aeeebd-c708-4184-87a0-2fae53cdef6e
-
 	joinOnDateBehavior: datePartOnly
 	fromColumn: 'bi repurchase_baseline_evaluation'.prediction_end_date
 	toColumn: LocalDateTable_59688965-dc2e-42d7-8067-42342aed88dd.Date

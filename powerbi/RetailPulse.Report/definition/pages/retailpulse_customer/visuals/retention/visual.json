@@ -1,17 +1,15 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "retention",
-  "howCreated": "Default",
   "position": {
-    "x": 780,
-    "y": 270,
+    "x": 784,
+    "y": 210,
     "z": 0,
-    "height": 400,
-    "width": 950
+    "height": 450,
+    "width": 1096
   },
   "visual": {
     "visualType": "lineChart",
-    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Category": {
@@ -27,7 +25,8 @@
                   "Property": "months_since_cohort"
                 }
               },
-              "queryRef": "months_since_cohort"
+              "queryRef": "months_since_cohort",
+              "active": true
             }
           ]
         },
@@ -71,6 +70,7 @@
           }
         }
       ]
-    }
+    },
+    "drillFilterOtherVisuals": true
   }
 }

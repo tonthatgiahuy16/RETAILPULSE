@@ -4,13 +4,12 @@ table 'bi customer_lifecycle_snapshot'
 	measure Customers = DISTINCTCOUNT ( 'bi customer_lifecycle_snapshot'[customer_id] )
 		formatString: #,0
 
-	measure 'Illustrative capacity customers' = ```
+	measure 'Illustrative capacity customers' =
 			CALCULATE (
 				[Customers],
 				'bi customer_lifecycle_snapshot'[is_within_illustrative_budget] = TRUE ()
 			)
-			```
-		formatString: "#,0"
+		formatString: #,0
 
 	column source_file_id
 		dataType: int64
@@ -185,11 +184,11 @@ table 'bi customer_lifecycle_snapshot'
 	partition 'bi customer_lifecycle_snapshot' = m
 		mode: import
 		source =
-				let
-			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
-				    bi_customer_lifecycle_snapshot = Source{[Schema="bi",Item="customer_lifecycle_snapshot"]}[Data]
-				in
-				    bi_customer_lifecycle_snapshot
+					let
+				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+					    bi_customer_lifecycle_snapshot = Source{[Schema="bi",Item="customer_lifecycle_snapshot"]}[Data]
+					in
+					    bi_customer_lifecycle_snapshot
 
 	annotation PBI_NavigationStepName = Navigation
 

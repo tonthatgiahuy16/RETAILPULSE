@@ -21,6 +21,7 @@ EXPECTED_SNAPSHOT_CONSUMERS = {
 }
 EXPECTED_PAGES = ["retailpulse_overview", "retailpulse_customer", "retailpulse_quality"]
 CONNECTION_PARAMETERS = {"RetailPulsePostgresServer", "RetailPulsePostgresDatabase"}
+EXPECTED_QUALITY_KPIS = {"baseline_precision", "baseline_recall", "baseline_accuracy"}
 
 
 def fail(errors: list[str], message: str) -> None:
@@ -52,13 +53,13 @@ def main() -> int:
                 expected_source = "PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase)"
                 if expected_source not in content:
                     fail(errors, f"{path.name}: does not use governed PostgreSQL parameters")
-        for measure_name in re.findall(r"^\s*measure (.+?) =\s*$", content, flags=re.MULTILINE):
+        for measure_name in re.findall(r"^\s*measure (.+?) = ```\r?$", content, flags=re.MULTILINE):
             if not re.search(
                 rf"^\s*measure {re.escape(measure_name)} = ```\r?\n.*?\r?\n\s*```\r?\n\s*formatString:",
                 content,
                 flags=re.MULTILINE | re.DOTALL,
             ):
-                fail(errors, f"{path.name}: multiline measure {measure_name} must delimit DAX with triple backticks")
+                fail(errors, f"{path.name}: multiline measure {measure_name} must close its DAX block before formatString")
 
     normalized: dict[str, str] = {}
     for table in tables:
@@ -74,14 +75,11 @@ def main() -> int:
         fail(errors, "relationships.tmdl retains auto-detected relationships")
     for table in EXPECTED_SNAPSHOT_CONSUMERS:
         name = "Snapshot_" + re.sub(r"[^A-Za-z0-9]+", "_", table).strip("_")
-        match = re.search(
-            rf"relationship {re.escape(name)}\r?\n(?P<body>.*?)(?=\r?\nrelationship |\Z)",
-            relationships,
-            flags=re.DOTALL,
-        )
+        relationship_blocks = re.split(r"(?m)(?=^relationship )", relationships)
+        match = next((block for block in relationship_blocks if block.startswith(f"relationship {name}\n") or block.startswith(f"relationship {name}\r\n")), None)
         if match is None:
             fail(errors, f"missing explicit snapshot relationship for {table}")
-        elif "\tfromCardinality: many" not in match.group("body") or "\ttoCardinality: one" not in match.group("body"):
+        elif "\tfromCardinality: many" not in match or "\ttoCardinality: one" not in match:
             fail(errors, f"{name} must model {table} as many and source snapshot as one")
     relationship_names = set(re.findall(r"^relationship ([^\r\n]+)", relationships, flags=re.MULTILINE))
     for table_name, content in tables.items():
@@ -104,6 +102,16 @@ def main() -> int:
             or "source_file_id" not in json.dumps(slicer_payload)
         ):
             fail(errors, f"{page}: source snapshot slicer has an invalid query")
+    for visual_name in EXPECTED_QUALITY_KPIS:
+        visual_path = REPORT / "pages" / "retailpulse_quality" / "visuals" / visual_name / "visual.json"
+        if not visual_path.exists():
+            fail(errors, f"retailpulse_quality: missing {visual_name} KPI")
+            continue
+        visual_payload = json.loads(visual_path.read_text(encoding="utf-8"))
+        if visual_payload.get("visual", {}).get("visualType") != "card":
+            fail(errors, f"retailpulse_quality: {visual_name} must be a card")
+        if "bi repurchase_baseline_evaluation" not in json.dumps(visual_payload):
+            fail(errors, f"retailpulse_quality: {visual_name} does not use the baseline contract")
     for path in REPORT.rglob("*.json"):
         json.loads(path.read_text(encoding="utf-8"))
 

@@ -1,17 +1,15 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "cancellation_status",
-  "howCreated": "Default",
   "position": {
-    "x": 900,
-    "y": 40,
+    "x": 964,
+    "y": 210,
     "z": 0,
-    "height": 380,
-    "width": 830
+    "height": 450,
+    "width": 916
   },
   "visual": {
     "visualType": "clusteredBarChart",
-    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Category": {
@@ -27,7 +25,8 @@
                   "Property": "candidate_status"
                 }
               },
-              "queryRef": "candidate_status"
+              "queryRef": "candidate_status",
+              "active": true
             }
           ]
         },
@@ -64,13 +63,14 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Cancellation candidate status \u2014 diagnostic only'"
+                  "Value": "'Cancellation candidate status — diagnostic only'"
                 }
               }
             }
           }
         }
       ]
-    }
+    },
+    "drillFilterOtherVisuals": true
   }
 }

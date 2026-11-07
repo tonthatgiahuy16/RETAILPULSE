@@ -1,13 +1,12 @@
 table 'bi customer_cohort_retention'
 	lineageTag: 66305a7c-f67d-4b42-a3f5-bfeedaa6aa7b
 
-	measure 'Weighted retention rate' = ```
+	measure 'Weighted retention rate' =
 			DIVIDE (
 				SUM ( 'bi customer_cohort_retention'[retained_customer_count] ),
 				SUM ( 'bi customer_cohort_retention'[cohort_customer_count] )
 			)
-			```
-		formatString: "0.0%"
+		formatString: 0.0%
 
 	column source_file_id
 		dataType: int64
@@ -115,11 +114,11 @@ table 'bi customer_cohort_retention'
 	partition 'bi customer_cohort_retention' = m
 		mode: import
 		source =
-				let
-			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
-				    bi_customer_cohort_retention = Source{[Schema="bi",Item="customer_cohort_retention"]}[Data]
-				in
-				    bi_customer_cohort_retention
+					let
+				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+					    bi_customer_cohort_retention = Source{[Schema="bi",Item="customer_cohort_retention"]}[Data]
+					in
+					    bi_customer_cohort_retention
 
 	annotation PBI_NavigationStepName = Navigation
 

@@ -69,11 +69,11 @@ table 'bi source_snapshot'
 	partition 'bi source_snapshot' = m
 		mode: import
 		source =
-				let
-			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
-				    bi_source_snapshot = Source{[Schema="bi",Item="source_snapshot"]}[Data]
-				in
-				    bi_source_snapshot
+					let
+				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+					    bi_source_snapshot = Source{[Schema="bi",Item="source_snapshot"]}[Data]
+					in
+					    bi_source_snapshot
 
 	annotation PBI_NavigationStepName = Navigation
 

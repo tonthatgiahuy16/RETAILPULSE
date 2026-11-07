@@ -49,11 +49,11 @@ table 'bi cancellation_diagnostic'
 	partition 'bi cancellation_diagnostic' = m
 		mode: import
 		source =
-				let
-			    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
-				    bi_cancellation_diagnostic = Source{[Schema="bi",Item="cancellation_diagnostic"]}[Data]
-				in
-				    bi_cancellation_diagnostic
+					let
+				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+					    bi_cancellation_diagnostic = Source{[Schema="bi",Item="cancellation_diagnostic"]}[Data]
+					in
+					    bi_cancellation_diagnostic
 
 	annotation PBI_NavigationStepName = Navigation
 

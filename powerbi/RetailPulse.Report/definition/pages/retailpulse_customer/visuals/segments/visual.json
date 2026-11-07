@@ -1,17 +1,15 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "segments",
-  "howCreated": "Default",
   "position": {
     "x": 40,
-    "y": 270,
+    "y": 210,
     "z": 0,
-    "height": 400,
-    "width": 700
+    "height": 450,
+    "width": 724
   },
   "visual": {
     "visualType": "clusteredBarChart",
-    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Category": {
@@ -27,7 +25,8 @@
                   "Property": "priority_segment"
                 }
               },
-              "queryRef": "priority_segment"
+              "queryRef": "priority_segment",
+              "active": true
             }
           ]
         },
@@ -71,6 +70,7 @@
           }
         }
       ]
-    }
+    },
+    "drillFilterOtherVisuals": true
   }
 }

@@ -1,17 +1,15 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "daily_revenue_table",
-  "howCreated": "Default",
   "position": {
-    "x": 1150,
-    "y": 270,
+    "x": 1220,
+    "y": 210,
     "z": 0,
-    "height": 420,
-    "width": 580
+    "height": 450,
+    "width": 660
   },
   "visual": {
-    "visualType": "table",
-    "drillFilterOtherVisuals": true,
+    "visualType": "tableEx",
     "query": {
       "queryState": {
         "Values": {
@@ -27,7 +25,7 @@
                   "Property": "event_date"
                 }
               },
-              "queryRef": "event_date"
+              "queryRef": "Date"
             },
             {
               "field": {
@@ -40,12 +38,11 @@
                   "Property": "Gross sales amount"
                 }
               },
-              "queryRef": "gross_sales_amount"
+              "queryRef": "Gross sales"
             },
             {
               "field": {
                 "Aggregation": {
-                  "Function": 0,
                   "Expression": {
                     "Column": {
                       "Expression": {
@@ -55,10 +52,11 @@
                       },
                       "Property": "cancellation_signed_amount"
                     }
-                  }
+                  },
+                  "Function": 0
                 }
               },
-              "queryRef": "cancellation_signed_amount"
+              "queryRef": "Cancellations (signed)"
             },
             {
               "field": {
@@ -71,7 +69,7 @@
                   "Property": "Net transaction amount"
                 }
               },
-              "queryRef": "net_transaction_amount"
+              "queryRef": "Net transaction"
             }
           ]
         }
@@ -98,6 +96,7 @@
           }
         }
       ]
-    }
+    },
+    "drillFilterOtherVisuals": true
   }
 }
