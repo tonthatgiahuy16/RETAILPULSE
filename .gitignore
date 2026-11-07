@@ -13,3 +13,4 @@ __pycache__/
 # Power BI Desktop local state and imported-model cache are machine-specific.
 # PBIP definitions under powerbi/ remain source-controlled.
 powerbi/**/.pbi/
+dashboard/.openai/hosting.json

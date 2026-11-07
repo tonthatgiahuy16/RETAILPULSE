@@ -1,83 +1,139 @@
 # RetailPulse
 
-RetailPulse is a learning project for a reproducible retail-data pipeline.
+RetailPulse is a learning and portfolio project for reproducible data
+engineering, analytics, and decision support using the UCI Online Retail II
+dataset. It demonstrates a batch pipeline from an immutable source snapshot to
+PostgreSQL analytical contracts, dbt checks, and a Power BI report project.
 
-The project purpose, scope, decision guardrails, and evidence policy are in
-the [Project Charter](docs/project/PROJECT_CHARTER.md). Technical contracts
-remain under [`docs/data/`](docs/data/) and [`docs/architecture/`](docs/architecture/).
+The project is not a production retail service. Its customer and revenue
+metrics describe the historical source snapshot; they do not represent a live
+retailer, accounting revenue, campaign results, or causal uplift.
 
-## Current status
+## What is in the repository
 
-Slice 1 has a hash-recorded UCI source snapshot, its initial profile, source-snapshot metadata, a PostgreSQL raw-layer migration, and a streaming raw-loader implementation with unit tests. On 2026-10-29 the migration and full raw ingestion were exercised against the local development database. The hash-recorded source manifest and raw table both contain 1,067,371 rows (525,461 for `Year 2009-2010`; 541,910 for `Year 2010-2011`). One same-hash rerun was recorded as `SKIPPED_ALREADY_LOADED` with no new raw rows; an intentionally failed insert was rolled back and recorded as `FAILED`.
+- Immutable source tracking and PostgreSQL raw, staging, warehouse, mart, and
+  decision contracts, with lineage and reconciliation gates.
+- A migration runner, automated tests, and GitHub Actions checks using an
+  isolated PostgreSQL service.
+- dbt adapter views and contract tests over the existing PostgreSQL contracts.
+- A read-only PostgreSQL `bi` semantic layer and a Power BI Project (PBIP)
+  report with Overview, Customer lifecycle, and Data quality pages.
+- Architecture, data-contract, KPI, and source-attribution documentation under
+  [`docs/`](docs/).
 
-Slice 2's staging migration was applied to the same local development database on 2026-10-29 and its SQL gate passed. `stg.online_retail_transaction` contains 1,067,371 source-row-grain rows: 1,047,877 `SALE` and 19,494 `CANCELLATION`; no row is `QUARANTINE` for this snapshot. Every cancellation remains `NOT_EVALUATED` for return matching.
+The original workbook and local database are not included. Runtime numbers
+below are historical, local evidence and should not be interpreted as a
+current hosted service or refresh status.
 
-Slice 3's event-date revenue mart was applied and reconciled against staging on the same local database. `mart.revenue_daily` has 604 snapshot-day rows with gross sales `20,813,918.428`, cancellation signed amount `-1,526,667.86`, and net transaction amount `19,287,250.568`; it includes 1,067,371 transaction rows, of which 243,007 have missing Customer ID. This is not accounting revenue and cancellations are not return-matched.
+## Data source and attribution
 
-Slice 4's reconciliation/data-quality report and fail-fast SQL gate were applied locally on 2026-10-29. The gate reconciles expected manifest rows to raw and staging counts, checks unique staging lineage and class coverage, and requires at least one mart day per published source snapshot.
+The source is [Online Retail II from the UCI Machine Learning
+Repository](https://archive.ics.uci.edu/dataset/502/online+retail+ii), DOI
+[10.24432/C5CG6D](https://doi.org/10.24432/C5CG6D), licensed under [Creative
+Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
 
-Slices 5 and 6 added a checksum-backed migration ledger, serialized migration runner, PostgreSQL integration CI, and dbt adapters. The ledger was bootstrapped through migration 006 on the local database; a rerun left every ledger application timestamp unchanged. A local dbt build created its two adapter views and passed all 14 tests without committing a credential.
+Citation: Chen, D. (2012). *Online Retail II* [Dataset]. UCI Machine Learning
+Repository. The original workbook is intentionally excluded from Git. See
+[`docs/data/SOURCE_AND_LICENSE.md`](docs/data/SOURCE_AND_LICENSE.md) for the
+recorded snapshot hashes and attribution details.
 
-Slices 7–10 add candidate-only cancellation diagnostics, customer purchase events, data-derived RFM snapshots, and a leakage-safe repurchase-label baseline. They do not turn a cancellation candidate into an accounting return, net candidate cancellations from revenue, or claim campaign uplift/ROI.
+## Local setup
 
-Slice 15 adds a snapshot-aware, read-only `bi` semantic layer for Power BI.
-Migration 020 was applied to the local development database on 2026-10-31;
-direct PostgreSQL queries returned 604 daily revenue rows, 1,047,877 sales-line
-rows, 5,878 customer-lifecycle rows, and 325 cohort-retention rows. A dedicated
-Power BI login, report, gateway, and refresh evidence are deliberately separate
-administrator/report-author steps and are not stored in this repository.
+Requirements: Python 3.13 or later, PostgreSQL, and (for the optional
+transform checks) dbt Core with the PostgreSQL adapter. The CI workflow
+provides an isolated PostgreSQL service for integration checks.
 
-## Slice 1 contract
+From PowerShell, create a virtual environment and install the project with the
+optional dbt and model dependencies:
 
-The input is an immutable source file. Its SHA-256 hash identifies its content. The same hash must not create a second raw copy. Raw rows retain their source sheet and row number; business-level duplicates are not removed at raw ingestion.
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e '.[transform,model]'
+```
 
-Read [`docs/data/LINEAGE_AND_BATCHING.md`](docs/data/LINEAGE_AND_BATCHING.md) before implementing the database loader.
-
-## Run the available tests
+Set `PYTHONPATH` for the test suite and run the available tests:
 
 ```powershell
 $env:PYTHONPATH = 'src'
 python -m unittest discover -s tests -v
 ```
 
-GitHub Actions starts an isolated PostgreSQL service, exercises migration bootstrap/rerun and concurrent runners, then runs `dbt build`. The PostgreSQL integration tests are intentionally skipped on a developer machine unless both `RETAILPULSE_INTEGRATION_TEST=1` and a dedicated `RETAILPULSE_INTEGRATION_DSN` are supplied; they reset schemas and must never point at a shared database.
+PostgreSQL integration tests are skipped unless both
+`RETAILPULSE_INTEGRATION_TEST=1` and a dedicated
+`RETAILPULSE_INTEGRATION_DSN` are configured. They reset project schemas; use
+an isolated disposable database only, never a shared or production database.
+The GitHub Actions workflow runs these checks against its isolated service.
 
-## Run migrations, ingestion, and publish gates
+## Run the pipeline locally
 
-Set `DATABASE_URL` outside the repository, then run the migration and one ingestion attempt. `--source-retrieved-at` is the actual retrieval time of this local snapshot and must include its timezone.
+First obtain the source workbook from UCI under the ignored
+`data/raw/online_retail_ii/` directory. Its SHA-256 and source lineage are
+documented in `docs/data/`. Configure `DATABASE_URL` in the shell or another
+local secret store; do not put credentials in command history, tracked files,
+Power BI project files, or screenshots.
 
 ```powershell
 $env:PYTHONPATH = 'src'
-$env:DATABASE_URL = 'postgresql://...'
+# Set DATABASE_URL securely in your local environment before running this step.
 python scripts/run_pipeline.py `
   --workbook data/raw/online_retail_ii/online_retail_II.xlsx `
   --source-uri 'https://archive.ics.uci.edu/dataset/502/online+retail+ii' `
   --source-retrieved-at '<actual-retrieval-time-with-timezone>'
 ```
 
-The runner records each applied migration and its SHA-256 in `ops.schema_migration`, refuses migration drift, then runs SQL publish gates after ingestion. The loader first materializes a private copy of the workbook and hashes that exact copy; it serializes same-hash attempts with a PostgreSQL advisory lock, then inserts the source manifest, raw rows, and `SUCCEEDED` state in one transaction. A repeat of the same SHA-256 creates a `SKIPPED_ALREADY_LOADED` audit batch and no new raw rows. The command output is evidence for one run only; inspect the reported count and database reconciliation before treating the raw snapshot as published.
+Use the actual retrieval timestamp, including timezone. The command applies
+migrations, attempts ingestion, and runs publish gates; inspect its output and
+database reconciliation for the specific run. The recorded local run on
+2026-10-29 loaded 1,067,371 source rows and exercised same-hash skip and
+transaction rollback behavior. Those results are historical evidence, not a
+claim that the database is available or current in another environment.
 
-## Repurchase model evaluation
+## Power BI
 
-The optional model command builds rolling temporal examples from published
-customer events, evaluates Logistic Regression against the frequency rule, and
-writes a local JSON report. It does not publish scores or claim uplift/ROI.
-See [Repurchase model evaluation](docs/architecture/REPURCHASE_MODEL_EVALUATION.md).
+Open [`powerbi/RetailPulse.pbip`](powerbi/RetailPulse.pbip) in Power BI Desktop.
+The report connects to the PostgreSQL `bi` schema in Import mode. Configure
+the endpoint through the model parameters and provide credentials through
+Power BI's credential store; no database password is included in this repo.
+The model is designed around one selected source snapshot. See
+[`docs/architecture/POWER_BI_SEMANTIC_LAYER.md`](docs/architecture/POWER_BI_SEMANTIC_LAYER.md)
+for least-privilege setup, metric reconciliation, and interpretation limits.
 
-## Power BI semantic layer
+The report was opened locally and its three pages were manually confirmed to
+show data on 2026-11-07. This is a local Desktop check only; no Power BI Service
+publication, gateway configuration, scheduled refresh, or hosted availability
+is claimed.
 
-After the pipeline has published a source snapshot, connect Power BI only to
-the read-only `bi` schema. It provides snapshot-aware sales, customer
-lifecycle, cohort, cancellation-diagnostic, and baseline-evaluation views;
-it does not expose raw data or create a Power BI login automatically. See
-[Power BI semantic layer](docs/architecture/POWER_BI_SEMANTIC_LAYER.md) for
-least-privilege provisioning, Import-mode connection steps, KPI reconciliation,
-and reporting limits.
+Static project checks:
 
-## Not yet implemented
+```powershell
+python scripts/validate_powerbi_project.py
+python -m py_compile scripts/build_powerbi_report.py scripts/validate_powerbi_project.py
+git diff --check
+```
 
-- production scoring service and Airflow
+## Interpretation guardrails
 
-## dbt contract checks
+- Revenue measures are event-date transaction amounts, not accounting
+  revenue. Cancellation rows remain signed source events; candidate matches
+  are diagnostics, not verified returns.
+- Missing Customer ID rows remain in revenue totals and are excluded only by
+  customer-level eligibility contracts.
+- RFM priority is descriptive. Repurchase evaluation uses historical labels;
+  there is no campaign treatment data to establish causal uplift or ROI.
+- Every metric must retain its source snapshot, grain, time window, and
+  denominator. Do not add separate source snapshots unless a comparison
+  contract explicitly permits it.
 
-The dbt project in [`dbt/`](dbt/) exposes the already-verified PostgreSQL staging and mart contracts as analytics views without restating their business logic. See [`docs/architecture/DBT_CONTRACTS.md`](docs/architecture/DBT_CONTRACTS.md) for the environment-only profile and `dbt build` command.
+Read the [Project Charter](docs/project/PROJECT_CHARTER.md),
+[KPI Dictionary](docs/architecture/KPI_DICTIONARY.md), and data contracts
+before extending the analytical outputs.
+
+## Project status
+
+Implemented pipeline and analytics contracts are documented alongside their
+code and tests. Historical local runtime evidence is explicitly date-scoped.
+Production scoring service, Airflow orchestration, and hosted Power BI refresh
+remain out of scope or planned. The [Project Charter](docs/project/PROJECT_CHARTER.md)
+is the source for the current scope and roadmap.

@@ -38,8 +38,9 @@ Out of scope:
   causal impact without experimental data.
 
 Airflow is deferred until every underlying command and gate is independently
-repeatable. A trained production prediction service and a Power BI artifact
-are also future work, not current project capabilities.
+repeatable. A trained production prediction service is future work. The local
+Power BI Project is present; a hosted Power BI Service artifact is not part of
+this verified scope.
 
 ## Source and evidence boundaries
 
@@ -67,7 +68,7 @@ run in another environment.
 | Operations | Checksum migration ledger, runner, SQL gates, and integration CI configuration | Implemented |
 | dbt | Adapter views and contract tests over PostgreSQL staging and mart relations | Implemented |
 | Customer analytics | Candidate-only cancellation diagnostics, customer purchase events, RFM, repurchase label baseline, and cohort retention | Implemented |
-| Dashboard and BI consumption | Static dashboard plus a PostgreSQL `bi` semantic layer; Power BI report/gateway runtime evidence remains pending | Semantic layer implemented in code; runtime evidence pending |
+| Dashboard and BI consumption | PostgreSQL `bi` semantic layer and local Power BI Project (PBIP) report | Semantic layer implemented; report manually opened and its three pages confirmed to show data in Power BI Desktop on 2026-11-07; Service publication, gateway, and scheduled refresh are not verified |
 | Dimensional warehouse | Snapshot-scoped customer, product, and date dimensions plus a lineage-preserving sales-line fact | Implemented in code; runtime evidence pending |
 | Decision and ML | Rule-based RFM priority contract plus temporal Logistic Regression evaluation; score publication and production scoring remain planned | Model evaluation implemented in code; runtime evidence pending |
 | Orchestration | Airflow DAG and backfill operations | Planned |
