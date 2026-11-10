@@ -15,7 +15,12 @@ retailer, accounting revenue, campaign results, or causal uplift.
   decision contracts, with lineage and reconciliation gates.
 - A migration runner, automated tests, and GitHub Actions checks using an
   isolated PostgreSQL service.
+- An in-repo DAG runner with dependencies, retries, downstream skipping, a JSON
+  run record, and an optional failure webhook. See
+  [`docs/architecture/ORCHESTRATION.md`](docs/architecture/ORCHESTRATION.md).
 - dbt adapter views and contract tests over the existing PostgreSQL contracts.
+  dbt is a verification and lineage layer; migrations remain the source of
+  truth for transformation logic. See [`dbt/README.md`](dbt/README.md).
 - A read-only PostgreSQL `bi` semantic layer and a Power BI Project (PBIP)
   report with Overview, Customer lifecycle, and Data quality pages.
 - Architecture, data-contract, KPI, and source-attribution documentation under
@@ -90,6 +95,54 @@ database reconciliation for the specific run. The recorded local run on
 transaction rollback behavior. Those results are historical evidence, not a
 claim that the database is available or current in another environment.
 
+Local verification reported on 2026-11-10 (developer shell, not a hosted CI
+run): the four opt-in PostgreSQL integration tests passed, and
+`dbt build --project-dir dbt --profiles-dir dbt` finished with
+`PASS=16 WARN=0 ERROR=0 SKIP=0`, covering 2 models, 12 generic tests, and 2
+singular tests. These results are date-scoped to that environment.
+
+The same operations are available as a governed DAG with dependency order,
+retries, downstream skipping, and a JSON run record:
+
+```powershell
+python scripts/run_dag.py --output data/processed/orchestration/last_run.json
+```
+
+Add `--with-dbt` and `--train-model` to enable those optional tasks. The Power
+BI task records a manual refresh action, or verifies evidence passed with
+`--powerbi-evidence`; it never claims to refresh the report. See
+[`docs/architecture/ORCHESTRATION.md`](docs/architecture/ORCHESTRATION.md).
+
+Two local DAG runs on 2026-11-10 are recorded here; both are date-scoped to that
+machine and are not CI evidence.
+
+- `run_id 0d4bfd59b9c4`: no workbook. All 20 migrations were already applied,
+  ingestion was skipped, 12 SQL gates executed, dbt and model training were
+  disabled, and Power BI was recorded as a manual action. This proves dependency
+  wiring, skip semantics, and the run record only.
+- `run_id 8c0fc3c3e9ca`: full chain in 17 minutes. Migrations were already
+  applied; ingestion reported `SKIPPED_ALREADY_LOADED` for the same source hash
+  but still refreshed 8 materialized views (321s, dominated by
+  `dw.fct_sales_line`); 12 SQL gates took 550s; `dbt build` finished with
+  `PASS=16 WARN=0 ERROR=0 SKIP=0` in 108s; model training wrote
+  `data/processed/repurchase_model_evaluation.json` in 44s. Power BI remained a
+  manual action with no refresh evidence. Ingestion here re-used an existing
+  snapshot, so this run does not prove loading a new snapshot.
+
+Most of the wall clock is PostgreSQL work, not Python: the CLI only printed at
+the end of that run. The runner now logs `[dag] <task> started|finished` to
+stderr, and `--skip-refresh` skips the materialized-view refresh when the raw
+snapshot is unchanged. See
+[`docs/architecture/ORCHESTRATION.md`](docs/architecture/ORCHESTRATION.md).
+
+Power BI report verification on 2026-11-10 (developer screenshots, not CI):
+all three pages render with data and the source snapshot slicer is unpinned,
+confirming the PBIP metadata fix. Migration 021 repaired a self-referential
+materialized view in the cancellation candidate path, so matched and ambiguous
+candidates are now non-zero; the diagnostic chart now shows the candidate reason.
+The training step now persists model and rule-baseline metrics to
+`bi.repurchase_model_evaluation`.
+
 ## Power BI
 
 Open [`powerbi/RetailPulse.pbip`](powerbi/RetailPulse.pbip) in Power BI Desktop.
@@ -113,6 +166,11 @@ python -m py_compile scripts/build_powerbi_report.py scripts/validate_powerbi_pr
 git diff --check
 ```
 
+On 2026-11-10 these checks passed locally on the Power BI-saved files
+(`POWERBI_PROJECT=PASS`, 7 BI tables, 3 report pages), and the PBIP regression
+tests in `tests/test_powerbi_project_validation.py` passed. That is local
+static evidence; it does not claim a GitHub Actions run.
+
 ## Interpretation guardrails
 
 - Revenue measures are event-date transaction amounts, not accounting
@@ -134,6 +192,7 @@ before extending the analytical outputs.
 
 Implemented pipeline and analytics contracts are documented alongside their
 code and tests. Historical local runtime evidence is explicitly date-scoped.
-Production scoring service, Airflow orchestration, and hosted Power BI refresh
-remain out of scope or planned. The [Project Charter](docs/project/PROJECT_CHARTER.md)
+Production scoring service, hosted Power BI refresh, and an external scheduler
+such as Airflow remain out of scope; the in-repo DAG runner is implemented and
+tested. The [Project Charter](docs/project/PROJECT_CHARTER.md)
 is the source for the current scope and roadmap.

@@ -1,15 +1,17 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "missing_customer_trend",
+  "howCreated": "Default",
   "position": {
     "x": 40,
-    "y": 210,
+    "y": 190,
     "z": 0,
-    "height": 450,
+    "height": 420,
     "width": 904
   },
   "visual": {
     "visualType": "lineChart",
+    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Category": {
@@ -25,7 +27,8 @@
                   "Property": "event_date"
                 }
               },
-              "queryRef": "event_date",
+              "queryRef": "Event date",
+              "displayName": "Event date",
               "active": true
             }
           ]
@@ -43,7 +46,9 @@
                   "Property": "Missing customer ID rows"
                 }
               },
-              "queryRef": "Missing Customer ID rows"
+              "queryRef": "Missing ID rows",
+              "displayName": "Missing ID rows",
+              "active": true
             }
           ]
         }
@@ -63,14 +68,33 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Missing Customer ID rows by event date'"
+                  "Value": "'Missing Customer ID volume'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Daily count of unattributed guest transactions excluded from customer marts'"
                 }
               }
             }
           }
         }
       ]
-    },
-    "drillFilterOtherVisuals": true
+    }
   }
 }

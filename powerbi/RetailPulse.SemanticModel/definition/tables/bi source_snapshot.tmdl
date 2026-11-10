@@ -20,7 +20,7 @@ table 'bi source_snapshot'
 
 	column source_retrieved_at
 		dataType: dateTime
-		formatString: General Date
+		formatString: yyyy-mm-dd hh:mm:ss
 		lineageTag: e3dec522-4a82-4171-99e3-7bbbcecb8ff6
 		summarizeBy: none
 		sourceColumn: source_retrieved_at
@@ -69,7 +69,7 @@ table 'bi source_snapshot'
 	partition 'bi source_snapshot' = m
 		mode: import
 		source =
-					let
+				let
 				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
 					    bi_source_snapshot = Source{[Schema="bi",Item="source_snapshot"]}[Data]
 					in

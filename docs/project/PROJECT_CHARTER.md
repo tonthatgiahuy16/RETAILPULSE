@@ -70,8 +70,8 @@ run in another environment.
 | Customer analytics | Candidate-only cancellation diagnostics, customer purchase events, RFM, repurchase label baseline, and cohort retention | Implemented |
 | Dashboard and BI consumption | PostgreSQL `bi` semantic layer and local Power BI Project (PBIP) report | Semantic layer implemented; report manually opened and its three pages confirmed to show data in Power BI Desktop on 2026-11-07; Service publication, gateway, and scheduled refresh are not verified |
 | Dimensional warehouse | Snapshot-scoped customer, product, and date dimensions plus a lineage-preserving sales-line fact | Implemented in code; runtime evidence pending |
-| Decision and ML | Rule-based RFM priority contract plus temporal Logistic Regression evaluation; score publication and production scoring remain planned | Model evaluation implemented in code; runtime evidence pending |
-| Orchestration | Airflow DAG and backfill operations | Planned |
+| Decision and ML | Rule-based RFM priority contract plus temporal Logistic Regression evaluation; score publication and production scoring remain planned | Model evaluation implemented in code; runtime evidence pending; metrics persisted to bi.repurchase_model_evaluation |
+| Orchestration | In-repo DAG runner with dependency order, retries, downstream skipping, JSON run records, and an optional failure webhook; Airflow DAG and backfill operations | Runner implemented and tested; Airflow planned |
 
 The detailed and authoritative implementation contracts live in
 [`docs/architecture/`](../architecture/). This Charter deliberately does not

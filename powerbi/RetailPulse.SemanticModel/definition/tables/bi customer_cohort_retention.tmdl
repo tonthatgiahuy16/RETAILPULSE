@@ -7,6 +7,7 @@ table 'bi customer_cohort_retention'
 				SUM ( 'bi customer_cohort_retention'[cohort_customer_count] )
 			)
 		formatString: 0.0%
+		lineageTag: cb42b139-340b-4d7e-b275-42330dab84d3
 
 	column source_file_id
 		dataType: int64
@@ -27,7 +28,7 @@ table 'bi customer_cohort_retention'
 
 	column cohort_month
 		dataType: dateTime
-		formatString: Long Date
+		formatString: yyyy-mm
 		lineageTag: e0ab22ad-1f3b-4166-8096-191681d3da30
 		summarizeBy: none
 		sourceColumn: cohort_month
@@ -43,7 +44,7 @@ table 'bi customer_cohort_retention'
 
 	column activity_month
 		dataType: dateTime
-		formatString: Long Date
+		formatString: yyyy-mm
 		lineageTag: 25e696bd-dd0d-4816-b610-3ec5ea66dd4a
 		summarizeBy: none
 		sourceColumn: activity_month
@@ -114,7 +115,7 @@ table 'bi customer_cohort_retention'
 	partition 'bi customer_cohort_retention' = m
 		mode: import
 		source =
-					let
+				let
 				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
 					    bi_customer_cohort_retention = Source{[Schema="bi",Item="customer_cohort_retention"]}[Data]
 					in

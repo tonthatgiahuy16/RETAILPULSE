@@ -211,7 +211,7 @@ table 'bi sales_line'
 	partition 'bi sales_line' = m
 		mode: import
 		source =
-					let
+				let
 				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
 					    bi_sales_line = Source{[Schema="bi",Item="sales_line"]}[Data]
 					in

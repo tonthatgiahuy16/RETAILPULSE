@@ -1,15 +1,17 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "net_transaction",
+  "howCreated": "Default",
   "position": {
     "x": 412,
-    "y": 40,
+    "y": 36,
     "z": 0,
-    "height": 150,
+    "height": 134,
     "width": 352
   },
   "visual": {
     "visualType": "card",
+    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Values": {
@@ -25,7 +27,9 @@
                   "Property": "Net transaction amount"
                 }
               },
-              "queryRef": "Net transaction"
+              "queryRef": "Net transaction (\u00a3)",
+              "displayName": "Net transaction (\u00a3)",
+              "active": true
             }
           ]
         }
@@ -45,7 +49,27 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Net transaction amount'"
+                  "Value": "'Net transaction amount (\u00a3)'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Gross sales minus signed cancellations'"
                 }
               }
             }
@@ -53,6 +77,24 @@
         }
       ]
     },
-    "drillFilterOtherVisuals": true
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#0D9488'"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
   }
 }

@@ -1,15 +1,17 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "capacity",
+  "howCreated": "Default",
   "position": {
-    "x": 784,
-    "y": 40,
+    "x": 412,
+    "y": 36,
     "z": 0,
-    "height": 150,
-    "width": 724
+    "height": 134,
+    "width": 352
   },
   "visual": {
     "visualType": "card",
+    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Values": {
@@ -25,7 +27,9 @@
                   "Property": "Illustrative capacity customers"
                 }
               },
-              "queryRef": "Capacity customers"
+              "queryRef": "Within capacity",
+              "displayName": "Within capacity",
+              "active": true
             }
           ]
         }
@@ -45,7 +49,27 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Within illustrative capacity'"
+                  "Value": "'Campaign budget capacity'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Top 500 ranked under illustrative budget'"
                 }
               }
             }
@@ -53,6 +77,24 @@
         }
       ]
     },
-    "drillFilterOtherVisuals": true
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#4F46E5'"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
   }
 }

@@ -1,0 +1,5 @@
+# Power BI Desktop writes CRLF TMDL/JSON; pin it so saves do not churn diffs.
+powerbi/** text eol=crlf
+
+# Python sources stay LF on every platform.
+*.py text eol=lf

@@ -1,0 +1,147 @@
+table 'bi repurchase_model_evaluation'
+	lineageTag: 983efab7-3603-44ac-8062-ee659f144f27
+
+	column source_file_id
+		dataType: int64
+		formatString: 0
+		lineageTag: 3a640d76-4a1b-4721-bd20-6650d376a215
+		summarizeBy: none
+		sourceColumn: source_file_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column model_name
+		dataType: string
+		lineageTag: d39e5a8e-2b3d-4a0d-9fcd-9c136a83e4b5
+		summarizeBy: none
+		sourceColumn: model_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column evaluated_at
+		dataType: dateTime
+		formatString: yyyy-mm-dd hh:mm:ss
+		lineageTag: f7211a05-1565-4342-b9f7-c8855e9f0d4c
+		summarizeBy: none
+		sourceColumn: evaluated_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column decision_threshold
+		dataType: double
+		formatString: 0.00
+		lineageTag: d4af5958-4c3d-44b7-a3e6-3b4baca0ab59
+		summarizeBy: none
+		sourceColumn: decision_threshold
+
+		annotation SummarizationSetBy = Automatic
+
+	column customer_count
+		dataType: int64
+		formatString: 0
+		lineageTag: e2ab0c10-fc55-4a30-90c8-b1621f62d655
+		summarizeBy: none
+		sourceColumn: customer_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column positive_customer_count
+		dataType: int64
+		formatString: 0
+		lineageTag: cb25e1fd-b291-454c-be52-f3eb28da6172
+		summarizeBy: none
+		sourceColumn: positive_customer_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column positive_rate
+		dataType: double
+		formatString: 0.0%
+		lineageTag: 4e70ca9b-c0f5-409f-9bcf-612f8b173293
+		summarizeBy: none
+		sourceColumn: positive_rate
+
+		annotation SummarizationSetBy = Automatic
+
+	column precision_at_threshold
+		dataType: double
+		formatString: 0.0%
+		lineageTag: d238bdb0-fb36-4c64-9a2d-1c9b8a3ae549
+		summarizeBy: none
+		sourceColumn: precision_at_threshold
+
+		annotation SummarizationSetBy = Automatic
+
+	column recall_at_threshold
+		dataType: double
+		formatString: 0.0%
+		lineageTag: b14d834b-3f10-4a1b-ac2d-4a503eec0ee5
+		summarizeBy: none
+		sourceColumn: recall_at_threshold
+
+		annotation SummarizationSetBy = Automatic
+
+	column pr_auc
+		dataType: double
+		formatString: 0.0%
+		lineageTag: 187a35f9-d9a8-429e-b6ad-ff6a485a595e
+		summarizeBy: none
+		sourceColumn: pr_auc
+
+		annotation SummarizationSetBy = Automatic
+
+	column roc_auc
+		dataType: double
+		formatString: 0.000
+		lineageTag: 01fbc898-d7c8-42ef-bb1a-d07256d9acf2
+		summarizeBy: none
+		sourceColumn: roc_auc
+
+		annotation SummarizationSetBy = Automatic
+
+	column lift_at_top_20_percent
+		dataType: double
+		formatString: 0.00"x"
+		lineageTag: 3b42597d-e213-4f73-aebb-28ee521ee76f
+		summarizeBy: none
+		sourceColumn: lift_at_top_20_percent
+
+		annotation SummarizationSetBy = Automatic
+
+	column brier_score
+		dataType: double
+		formatString: 0.000
+		lineageTag: 76e9c552-a58d-47ee-a47a-52e85f6393f1
+		summarizeBy: none
+		sourceColumn: brier_score
+
+		annotation SummarizationSetBy = Automatic
+
+	column evaluation_note
+		dataType: string
+		lineageTag: 0ecbfbc8-6633-4779-9c67-e8ecd121e751
+		summarizeBy: none
+		sourceColumn: evaluation_note
+
+		annotation SummarizationSetBy = Automatic
+
+	column interpretation
+		dataType: string
+		lineageTag: ca12b464-12a9-4538-96a4-a190ad2c5921
+		summarizeBy: none
+		sourceColumn: interpretation
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'bi repurchase_model_evaluation' = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
+					    bi_repurchase_model_evaluation = Source{[Schema="bi",Item="repurchase_model_evaluation"]}[Data]
+					in
+					    bi_repurchase_model_evaluation
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table

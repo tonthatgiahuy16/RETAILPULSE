@@ -49,37 +49,29 @@ relationship 87aeeebd-c708-4184-87a0-2fae53cdef6e
 	toColumn: LocalDateTable_59688965-dc2e-42d7-8067-42342aed88dd.Date
 
 relationship Snapshot_bi_sales_daily
-	fromCardinality: many
-	toCardinality: one
 	fromColumn: 'bi sales_daily'.source_file_id
 	toColumn: 'bi source_snapshot'.source_file_id
 
 relationship Snapshot_bi_sales_line
-	fromCardinality: many
-	toCardinality: one
 	fromColumn: 'bi sales_line'.source_file_id
 	toColumn: 'bi source_snapshot'.source_file_id
 
 relationship Snapshot_bi_customer_lifecycle_snapshot
-	fromCardinality: many
-	toCardinality: one
 	fromColumn: 'bi customer_lifecycle_snapshot'.source_file_id
 	toColumn: 'bi source_snapshot'.source_file_id
 
 relationship Snapshot_bi_customer_cohort_retention
-	fromCardinality: many
-	toCardinality: one
 	fromColumn: 'bi customer_cohort_retention'.source_file_id
 	toColumn: 'bi source_snapshot'.source_file_id
 
 relationship Snapshot_bi_cancellation_diagnostic
-	fromCardinality: many
-	toCardinality: one
 	fromColumn: 'bi cancellation_diagnostic'.source_file_id
 	toColumn: 'bi source_snapshot'.source_file_id
 
 relationship Snapshot_bi_repurchase_baseline_evaluation
-	fromCardinality: many
-	toCardinality: one
 	fromColumn: 'bi repurchase_baseline_evaluation'.source_file_id
+	toColumn: 'bi source_snapshot'.source_file_id
+
+relationship Snapshot_bi_repurchase_model_evaluation
+	fromColumn: 'bi repurchase_model_evaluation'.source_file_id
 	toColumn: 'bi source_snapshot'.source_file_id

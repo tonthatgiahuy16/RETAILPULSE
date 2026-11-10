@@ -1,15 +1,17 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "cancellation_status",
+  "howCreated": "Default",
   "position": {
     "x": 964,
-    "y": 210,
+    "y": 190,
     "z": 0,
-    "height": 450,
+    "height": 420,
     "width": 916
   },
   "visual": {
     "visualType": "clusteredBarChart",
+    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Category": {
@@ -22,10 +24,11 @@
                       "Entity": "bi cancellation_diagnostic"
                     }
                   },
-                  "Property": "candidate_status"
+                  "Property": "candidate_reason"
                 }
               },
-              "queryRef": "candidate_status",
+              "queryRef": "Match reason",
+              "displayName": "Match reason",
               "active": true
             }
           ]
@@ -43,7 +46,9 @@
                   "Property": "Cancellation diagnostic rows"
                 }
               },
-              "queryRef": "Cancellation diagnostic rows"
+              "queryRef": "Cancellation rows",
+              "displayName": "Cancellation rows",
+              "active": true
             }
           ]
         }
@@ -63,7 +68,27 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Cancellation candidate status — diagnostic only'"
+                  "Value": "'Cancellation candidate matching'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Why each cancellation row did or did not find a prior sale; diagnostic only, not verified returns'"
                 }
               }
             }
@@ -71,6 +96,20 @@
         }
       ]
     },
-    "drillFilterOtherVisuals": true
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
   }
 }

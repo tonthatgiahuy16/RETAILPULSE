@@ -3,6 +3,7 @@ table 'bi customer_lifecycle_snapshot'
 
 	measure Customers = DISTINCTCOUNT ( 'bi customer_lifecycle_snapshot'[customer_id] )
 		formatString: #,0
+		lineageTag: e0449bf3-b539-441d-84ec-3e53c01a7c98
 
 	measure 'Illustrative capacity customers' =
 			CALCULATE (
@@ -10,6 +11,27 @@ table 'bi customer_lifecycle_snapshot'
 				'bi customer_lifecycle_snapshot'[is_within_illustrative_budget] = TRUE ()
 			)
 		formatString: #,0
+		lineageTag: f368733b-4f32-408e-9dfd-285e026ac918
+
+	measure 'Champions count' =
+			CALCULATE (
+				[Customers],
+				'bi customer_lifecycle_snapshot'[priority_segment] = "CHAMPIONS"
+			)
+		formatString: #,0
+		lineageTag: b82c7a91-4e12-4c6e-8211-123456789abc
+
+	measure 'At-risk high-value count' =
+			CALCULATE (
+				[Customers],
+				'bi customer_lifecycle_snapshot'[priority_segment] = "AT_RISK_HIGH_VALUE"
+			)
+		formatString: #,0
+		lineageTag: c93d8b02-5f23-4d7f-9322-987654321def
+
+	measure 'Monetary spend (£)' = SUM ( 'bi customer_lifecycle_snapshot'[monetary_amount] )
+		formatString: #,0.00
+		lineageTag: d74e9c13-6a34-4e8a-8433-112233445577
 
 	column source_file_id
 		dataType: int64
@@ -30,7 +52,7 @@ table 'bi customer_lifecycle_snapshot'
 
 	column as_of_date
 		dataType: dateTime
-		formatString: Long Date
+		formatString: yyyy-mm-dd
 		lineageTag: fbb53c58-d668-4335-865b-6c40aef2f362
 		summarizeBy: none
 		sourceColumn: as_of_date
@@ -184,7 +206,7 @@ table 'bi customer_lifecycle_snapshot'
 	partition 'bi customer_lifecycle_snapshot' = m
 		mode: import
 		source =
-					let
+				let
 				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
 					    bi_customer_lifecycle_snapshot = Source{[Schema="bi",Item="customer_lifecycle_snapshot"]}[Data]
 					in

@@ -1,7 +1,13 @@
 /// PostgreSQL host and port for the read-only RetailPulse BI connection.
 /// Change through Power BI Desktop's Manage parameters; do not store credentials here.
 expression RetailPulsePostgresServer = "localhost:5432" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 27b9839a-1e64-49d6-b482-b4b6c3b507a4
+
+	annotation PBI_ResultType = Text
 
 /// PostgreSQL database for the read-only RetailPulse BI connection.
 /// Change through Power BI Desktop's Manage parameters; do not store credentials here.
 expression RetailPulsePostgresDatabase = "retailpulse" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: c00e833c-6b0c-4a49-a4f4-3f8bb6095400
+
+	annotation PBI_ResultType = Text

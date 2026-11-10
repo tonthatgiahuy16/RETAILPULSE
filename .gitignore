@@ -13,4 +13,13 @@ __pycache__/
 # Power BI Desktop local state and imported-model cache are machine-specific.
 # PBIP definitions under powerbi/ remain source-controlled.
 powerbi/**/.pbi/
+# Diagram canvas positions are cosmetic and churn on every Desktop layout save.
+powerbi/**/diagramLayout.json
+
+# dbt local profile and build artifacts (credentials stay outside Git).
+dbt/profiles.yml
+dbt/.user.yml
+dbt/logs/
+dbt/target/
+dbt/dbt_packages/
 dashboard/.openai/hosting.json

@@ -1,15 +1,17 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "missing_share",
+  "howCreated": "Default",
   "position": {
     "x": 1156,
-    "y": 40,
+    "y": 36,
     "z": 0,
-    "height": 150,
+    "height": 134,
     "width": 352
   },
   "visual": {
     "visualType": "card",
+    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Values": {
@@ -25,7 +27,9 @@
                   "Property": "Missing customer ID share"
                 }
               },
-              "queryRef": "Missing Customer ID share"
+              "queryRef": "Missing ID share",
+              "displayName": "Missing ID share",
+              "active": true
             }
           ]
         }
@@ -51,8 +55,46 @@
             }
           }
         }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Share of guest rows without customer key'"
+                }
+              }
+            }
+          }
+        }
       ]
     },
-    "drillFilterOtherVisuals": true
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#D97706'"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
   }
 }

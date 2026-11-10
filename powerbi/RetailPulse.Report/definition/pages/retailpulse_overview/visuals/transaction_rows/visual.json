@@ -1,15 +1,17 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "transaction_rows",
+  "howCreated": "Default",
   "position": {
     "x": 784,
-    "y": 40,
+    "y": 36,
     "z": 0,
-    "height": 150,
+    "height": 134,
     "width": 352
   },
   "visual": {
     "visualType": "card",
+    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Values": {
@@ -22,10 +24,12 @@
                       "Entity": "bi sales_daily"
                     }
                   },
-                  "Property": "Transaction rows"
+                  "Property": "Transaction rows (exact)"
                 }
               },
-              "queryRef": "Transaction rows"
+              "queryRef": "Transaction rows",
+              "displayName": "Transaction rows",
+              "active": true
             }
           ]
         }
@@ -51,8 +55,46 @@
             }
           }
         }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Total audited staging line items (exact count)'"
+                }
+              }
+            }
+          }
+        }
       ]
     },
-    "drillFilterOtherVisuals": true
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#0F172A'"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
   }
 }

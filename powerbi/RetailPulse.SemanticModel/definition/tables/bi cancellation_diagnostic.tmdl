@@ -3,6 +3,7 @@ table 'bi cancellation_diagnostic'
 
 	measure 'Cancellation diagnostic rows' = SUM ( 'bi cancellation_diagnostic'[cancellation_row_count] )
 		formatString: #,0
+		lineageTag: c4c8734a-c87d-4afe-8c9f-50bc6731e8a4
 
 	column source_file_id
 		dataType: int64
@@ -46,10 +47,18 @@ table 'bi cancellation_diagnostic'
 
 		annotation SummarizationSetBy = Automatic
 
+	column candidate_reason
+		dataType: string
+		lineageTag: eb18ff1a-ac78-4fec-835e-ba1a05de7224
+		summarizeBy: none
+		sourceColumn: candidate_reason
+
+		annotation SummarizationSetBy = Automatic
+
 	partition 'bi cancellation_diagnostic' = m
 		mode: import
 		source =
-					let
+				let
 				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
 					    bi_cancellation_diagnostic = Source{[Schema="bi",Item="cancellation_diagnostic"]}[Data]
 					in

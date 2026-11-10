@@ -1,15 +1,17 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "retention",
+  "howCreated": "Default",
   "position": {
     "x": 784,
-    "y": 210,
+    "y": 190,
     "z": 0,
     "height": 450,
     "width": 1096
   },
   "visual": {
     "visualType": "lineChart",
+    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Category": {
@@ -25,7 +27,8 @@
                   "Property": "months_since_cohort"
                 }
               },
-              "queryRef": "months_since_cohort",
+              "queryRef": "Months since first purchase",
+              "displayName": "Months since first purchase",
               "active": true
             }
           ]
@@ -43,7 +46,9 @@
                   "Property": "Weighted retention rate"
                 }
               },
-              "queryRef": "Weighted retention"
+              "queryRef": "Retention rate",
+              "displayName": "Retention rate",
+              "active": true
             }
           ]
         }
@@ -63,7 +68,27 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Weighted cohort retention by months since cohort'"
+                  "Value": "'Cohort retention trajectory'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Weighted repeat-purchase retention across dense monthly cohorts; month 0 is 100% by definition'"
                 }
               }
             }
@@ -71,6 +96,20 @@
         }
       ]
     },
-    "drillFilterOtherVisuals": true
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
   }
 }
