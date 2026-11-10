@@ -184,6 +184,14 @@ class PowerBiProjectValidationTests(unittest.TestCase):
         payload = json.loads(base_rate.read_text(encoding="utf-8"))
         self.assertEqual(payload["visual"]["visualType"], "card")
         self.assertIn("Repurchase base rate", json.dumps(payload))
+        semantic_table = (
+            POWERBI_ROOT
+            / "RetailPulse.SemanticModel"
+            / "definition"
+            / "tables"
+            / "bi repurchase_baseline_evaluation.tmdl"
+        ).read_text(encoding="utf-8")
+        self.assertIn("measure 'Repurchase base rate' =", semantic_table)
 
     def test_cancellation_chart_reports_candidate_reason(self) -> None:
         self.assertEqual(VALIDATOR.validate_project(self.root), [])
@@ -216,6 +224,102 @@ class PowerBiProjectValidationTests(unittest.TestCase):
         payload = json.loads(table.read_text(encoding="utf-8"))
         self.assertIn("bi repurchase_model_evaluation", json.dumps(payload))
         self.assertIn("lift_at_top_20_percent", json.dumps(payload))
+
+    def tables_dir(self) -> Path:
+        return self.root / "RetailPulse.SemanticModel" / "definition" / "tables"
+
+    def test_visual_referencing_missing_measure_is_rejected(self) -> None:
+        """A Desktop save that drops a measure must not leave visuals silently broken."""
+
+        path = self.tables_dir() / "bi customer_lifecycle_snapshot.tmdl"
+        text = path.read_text(encoding="utf-8")
+        stripped = re.sub(r"(?m)^\tmeasure 'Monetary spend \(£\)' = .*\r?\n(?:\t\t.*\r?\n)*\r?\n", "", text)
+        self.assertNotEqual(text, stripped)
+        path.write_text(stripped, encoding="utf-8")
+        errors = VALIDATOR.validate_project(self.root)
+        self.assertIn(
+            "retailpulse_customer/visuals/segment_spend: references missing measure "
+            "'bi customer_lifecycle_snapshot'[Monetary spend (£)]",
+            errors,
+        )
+
+    def test_visual_referencing_missing_column_is_rejected(self) -> None:
+        path = self.tables_dir() / "bi cancellation_diagnostic.tmdl"
+        text = path.read_text(encoding="utf-8")
+        stripped = re.sub(r"(?m)^\tcolumn candidate_reason\r?\n(?:\t\t.*\r?\n|\r?\n)*?(?=\t\S)", "", text)
+        self.assertNotEqual(text, stripped)
+        path.write_text(stripped, encoding="utf-8")
+        errors = VALIDATOR.validate_project(self.root)
+        self.assertIn(
+            "retailpulse_quality/visuals/cancellation_status: references missing column "
+            "'bi cancellation_diagnostic'[candidate_reason]",
+            errors,
+        )
+
+
+BUILD_SPEC = importlib.util.spec_from_file_location(
+    "build_powerbi_report", PROJECT_ROOT / "scripts" / "build_powerbi_report.py"
+)
+assert BUILD_SPEC is not None and BUILD_SPEC.loader is not None
+BUILDER = importlib.util.module_from_spec(BUILD_SPEC)
+BUILD_SPEC.loader.exec_module(BUILDER)
+
+
+def visual_contract(payload: dict) -> dict:
+    """Keep the parts of a visual that carry meaning; ignore Desktop key order and formatting."""
+
+    visual = payload["visual"]
+    query = visual.get("query", {})
+    containers = visual.get("visualContainerObjects", {})
+
+    def text(key: str) -> object:
+        entries = containers.get(key) or [{}]
+        return entries[0].get("properties", {}).get("text")
+
+    return {
+        "visualType": visual["visualType"],
+        "position": {key: payload["position"][key] for key in ("x", "y", "width", "height")},
+        "queryState": {
+            role: [(item["queryRef"], item["field"]) for item in state["projections"]]
+            for role, state in query.get("queryState", {}).items()
+        },
+        "sortDefinition": query.get("sortDefinition"),
+        "title": text("title"),
+        "subTitle": text("subTitle"),
+        "objects": visual.get("objects"),
+    }
+
+
+class PowerBiReportGeneratorDriftTests(unittest.TestCase):
+    def test_checked_in_visuals_match_generator(self) -> None:
+        """A Desktop save of a stale session must not silently revert the generated design."""
+
+        report_dir = POWERBI_ROOT / "RetailPulse.Report" / "definition"
+        with project_temp_directory() as temp:
+            generated = Path(temp)
+            original_root = BUILDER.ROOT
+            BUILDER.ROOT = generated
+            try:
+                BUILDER.build()
+            finally:
+                BUILDER.ROOT = original_root
+
+            generated_visuals = {
+                path.relative_to(generated).as_posix() for path in generated.rglob("visual.json")
+            }
+            checked_in_visuals = {
+                path.relative_to(report_dir).as_posix() for path in report_dir.rglob("visual.json")
+            }
+            self.assertEqual(generated_visuals, checked_in_visuals)
+            for relative in sorted(generated_visuals):
+                with self.subTest(visual=relative):
+                    expected = json.loads((generated / relative).read_text(encoding="utf-8"))
+                    actual = json.loads((report_dir / relative).read_text(encoding="utf-8"))
+                    self.assertEqual(visual_contract(actual), visual_contract(expected))
+
+            expected_pages = json.loads((generated / "pages" / "pages.json").read_text(encoding="utf-8"))
+            actual_pages = json.loads((report_dir / "pages" / "pages.json").read_text(encoding="utf-8"))
+            self.assertEqual(actual_pages["pageOrder"], expected_pages["pageOrder"])
 
 
 if __name__ == "__main__":

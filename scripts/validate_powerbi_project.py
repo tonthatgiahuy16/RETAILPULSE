@@ -199,10 +199,71 @@ def validate_report(report_dir: Path) -> list[str]:
     return errors
 
 
+def semantic_fields(model_dir: Path) -> dict[str, dict[str, set[str]]]:
+    """Map each TMDL table to its declared column and measure names."""
+
+    fields: dict[str, dict[str, set[str]]] = {}
+    for path in (model_dir / "tables").glob("*.tmdl"):
+        content = path.read_text(encoding="utf-8")
+        match = re.search(r"^table (?:'([^']+)'|(\S+))", content, flags=re.MULTILINE)
+        if not match:
+            continue
+        name_pattern = r"(?:'((?:[^']|'')+)'|([^\s=']+))"
+        columns = {
+            (quoted or bare).replace("''", "'")
+            for quoted, bare in re.findall(rf"^\tcolumn {name_pattern}", content, flags=re.MULTILINE)
+        }
+        measures = {
+            (quoted or bare).replace("''", "'")
+            for quoted, bare in re.findall(rf"^\tmeasure {name_pattern}", content, flags=re.MULTILINE)
+        }
+        fields[match.group(1) or match.group(2)] = {"Column": columns, "Measure": measures}
+    return fields
+
+
+def visual_field_references(node: object):
+    """Yield (kind, entity, property) for every Column/Measure reference in a visual."""
+
+    if isinstance(node, dict):
+        for kind in ("Column", "Measure"):
+            reference = node.get(kind)
+            if isinstance(reference, dict):
+                entity = reference.get("Expression", {}).get("SourceRef", {}).get("Entity")
+                property_name = reference.get("Property")
+                if entity and property_name:
+                    yield kind, entity, property_name
+        for value in node.values():
+            yield from visual_field_references(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from visual_field_references(value)
+
+
+def validate_field_references(model_dir: Path, report_dir: Path) -> list[str]:
+    """Reject visuals that query a column or measure the semantic model does not define."""
+
+    errors: list[str] = []
+    fields = semantic_fields(model_dir)
+    for path in sorted((report_dir / "pages").rglob("visual.json")):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        label = path.relative_to(report_dir / "pages").parent.as_posix()
+        for kind, entity, property_name in sorted(set(visual_field_references(payload))):
+            table = fields.get(entity)
+            if table is None:
+                fail(errors, f"{label}: references missing table {entity!r}")
+            elif property_name not in table[kind]:
+                fail(errors, f"{label}: references missing {kind.lower()} '{entity}'[{property_name}]")
+    return errors
+
+
 def validate_project(root: Path = PROJECT_ROOT) -> list[str]:
     model_dir = root / "RetailPulse.SemanticModel" / "definition"
     report_dir = root / "RetailPulse.Report" / "definition"
-    return validate_model(model_dir) + validate_report(report_dir)
+    return (
+        validate_model(model_dir)
+        + validate_report(report_dir)
+        + validate_field_references(model_dir, report_dir)
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
