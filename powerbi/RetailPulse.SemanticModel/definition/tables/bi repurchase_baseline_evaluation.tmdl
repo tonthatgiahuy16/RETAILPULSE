@@ -7,6 +7,7 @@ table 'bi repurchase_baseline_evaluation'
 				SUM ( 'bi repurchase_baseline_evaluation'[predicted_repurchase_customer_count] )
 			)
 		formatString: 0.0%
+		lineageTag: 0e766255-e451-45d3-a451-e19057853ee9
 
 	measure 'Baseline recall' =
 			DIVIDE (
@@ -14,6 +15,7 @@ table 'bi repurchase_baseline_evaluation'
 				SUM ( 'bi repurchase_baseline_evaluation'[actual_repurchase_customer_count] )
 			)
 		formatString: 0.0%
+		lineageTag: 0929d50f-232e-4dd1-beb3-29cf478392c6
 
 	measure 'Baseline accuracy' =
 			DIVIDE (
@@ -21,6 +23,19 @@ table 'bi repurchase_baseline_evaluation'
 				SUM ( 'bi repurchase_baseline_evaluation'[labeled_customer_count] )
 			)
 		formatString: 0.0%
+		lineageTag: fd6c665d-7d76-4a57-ad79-b432880ec4f5
+
+	measure 'Labeled customers' = SUM ( 'bi repurchase_baseline_evaluation'[labeled_customer_count] )
+		formatString: #,0
+		lineageTag: e81b2a93-5c31-4e8a-8101-112233445566
+
+	measure 'Repurchase base rate' =
+			DIVIDE (
+				SUM ( 'bi repurchase_baseline_evaluation'[actual_repurchase_customer_count] ),
+				SUM ( 'bi repurchase_baseline_evaluation'[labeled_customer_count] )
+			)
+		formatString: 0.0%
+		lineageTag: 78852cb0-9985-4be7-95a6-5f7a6c76dc22
 
 	column source_file_id
 		dataType: int64
@@ -33,7 +48,7 @@ table 'bi repurchase_baseline_evaluation'
 
 	column observation_start_date
 		dataType: dateTime
-		formatString: Long Date
+		formatString: yyyy-mm-dd
 		lineageTag: becd199d-fdef-4318-8ea7-73c98ef0d4c5
 		summarizeBy: none
 		sourceColumn: observation_start_date
@@ -49,7 +64,7 @@ table 'bi repurchase_baseline_evaluation'
 
 	column prediction_start_date
 		dataType: dateTime
-		formatString: Long Date
+		formatString: yyyy-mm-dd
 		lineageTag: 34fa7698-7d70-4cf8-978f-ff89bd35bd0c
 		summarizeBy: none
 		sourceColumn: prediction_start_date
@@ -65,7 +80,7 @@ table 'bi repurchase_baseline_evaluation'
 
 	column prediction_end_date
 		dataType: dateTime
-		formatString: Long Date
+		formatString: yyyy-mm-dd
 		lineageTag: 7b14e715-6455-4a4e-9161-759d6d2725c7
 		summarizeBy: none
 		sourceColumn: prediction_end_date
@@ -165,7 +180,7 @@ table 'bi repurchase_baseline_evaluation'
 	partition 'bi repurchase_baseline_evaluation' = m
 		mode: import
 		source =
-					let
+				let
 				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
 					    bi_repurchase_baseline_evaluation = Source{[Schema="bi",Item="repurchase_baseline_evaluation"]}[Data]
 					in

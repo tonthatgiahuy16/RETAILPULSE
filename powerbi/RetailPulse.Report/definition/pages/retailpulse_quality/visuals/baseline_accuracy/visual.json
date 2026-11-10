@@ -1,15 +1,17 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "baseline_accuracy",
+  "howCreated": "Default",
   "position": {
-    "x": 1032,
-    "y": 40,
+    "x": 644,
+    "y": 36,
     "z": 0,
-    "height": 150,
-    "width": 476
+    "height": 134,
+    "width": 280
   },
   "visual": {
     "visualType": "card",
+    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Values": {
@@ -25,7 +27,9 @@
                   "Property": "Baseline accuracy"
                 }
               },
-              "queryRef": "Baseline accuracy"
+              "queryRef": "Accuracy",
+              "displayName": "Accuracy",
+              "active": true
             }
           ]
         }
@@ -51,8 +55,46 @@
             }
           }
         }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Overall accuracy; compare with the base rate'"
+                }
+              }
+            }
+          }
+        }
       ]
     },
-    "drillFilterOtherVisuals": true
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#0284C7'"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
   }
 }

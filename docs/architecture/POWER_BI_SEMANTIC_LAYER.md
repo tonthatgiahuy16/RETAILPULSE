@@ -22,8 +22,9 @@ or write model propensity scores to PostgreSQL.
 | `bi.sales_line` | One `SALE` staging source row | `dw.fct_sales_line` + dimensions | Product, country, and time analysis. |
 | `bi.customer_lifecycle_snapshot` | Source snapshot × RFM as-of date × customer | `decision.customer_priority_snapshot` | RFM and descriptive priority segmentation. |
 | `bi.customer_cohort_retention` | Source snapshot × cohort month × activity month | `mart.customer_cohort_retention` | Cohort heatmap/retention curve. |
-| `bi.cancellation_diagnostic` | Source snapshot × candidate status | `int.cancellation_match_resolution` | Candidate diagnostic counts only. |
+| `bi.cancellation_diagnostic` | Source snapshot × candidate status | `int.cancellation_match_resolution` | Candidate diagnostic counts only; includes candidate_reason since 2026-11-10. |
 | `bi.repurchase_baseline_evaluation` | Source snapshot × label windows | `mart.customer_repurchase_baseline_evaluation` | Historical baseline evaluation. |
+| `bi.repurchase_model_evaluation | Source snapshot x model name | `mart.repurchase_model_evaluation` | Logistic regression vs rule baseline backtest. |
 
 The SQL gate `tests/sql/020_powerbi_semantic_layer.sql` reconciles the BI
 views to their source contracts and verifies sales-line/customer grains.
@@ -88,6 +89,34 @@ allow browsing or reading staging relations. Do not grant this role `CREATE`,
 5. Reconcile displayed totals to `bi.sales_daily` for the selected snapshot
    before publishing. Keep the interpretation warnings visible on revenue,
    cancellation, and decision pages.
+
+## Static PBIP checks and TMDL defaults
+
+Run `python scripts/validate_powerbi_project.py` (optionally with
+`--root <pbip-folder>`) to gate the PBIP metadata. CI runs the same command and
+`tests/test_powerbi_project_validation.py`, which validates the repository's
+actual Power BI-saved files.
+
+Power BI Desktop rewrites TMDL on save and omits properties that equal their
+model default. A relationship is **many-to-one** unless it declares otherwise,
+so a saved relationship with only `fromColumn`/`toColumn` is still
+`many` to `one`; do not re-add `fromCardinality`/`toCardinality` just to make a
+check pass. The validator resolves those defaults and separately asserts that
+each `Snapshot_*` relationship joins the expected `bi.*` table to
+`bi source_snapshot`, so an omitted default cannot hide a mis-wired relation.
+Each visible `source_snapshot_slicer` must not persist a filter, because a
+saved filter literal would pin the report to one snapshot id.
+
+When adding a snapshot consumer, add a `Snapshot_<table>` relationship with
+`<table>.source_file_id` as `fromColumn` and
+`bi source_snapshot.source_file_id` as `toColumn`. Explicit cardinality is
+optional and is only needed when a relation is not many-to-one.
+
+Desktop also adds a trailing blank line to every TMDL file it saves. That is
+whitespace only, but `git diff --check` reports it as `new blank line at EOF`;
+strip the extra line before committing instead of treating it as drift.
+`powerbi/**` is pinned to CRLF in `.gitattributes`, and the cosmetic
+`diagramLayout.json` canvas file is ignored.
 
 ## Refresh and evidence
 

@@ -9,7 +9,7 @@ model Model
 
 annotation __PBI_TimeIntelligenceEnabled = 1
 
-annotation PBI_QueryOrder = ["bi cancellation_diagnostic","bi customer_cohort_retention","bi customer_lifecycle_snapshot","bi sales_line","bi sales_daily","bi source_snapshot","bi repurchase_baseline_evaluation"]
+annotation PBI_QueryOrder = ["bi cancellation_diagnostic","bi customer_cohort_retention","bi customer_lifecycle_snapshot","bi sales_line","bi sales_daily","bi source_snapshot","bi repurchase_baseline_evaluation","bi repurchase_model_evaluation","RetailPulsePostgresServer","RetailPulsePostgresDatabase"]
 
 annotation PBI_ProTooling = ["DevMode"]
 
@@ -28,6 +28,7 @@ ref table LocalDateTable_109ef36c-dd45-41a2-b31b-5e344a500d01
 ref table 'bi source_snapshot'
 ref table LocalDateTable_58ea468c-996c-4157-a6b9-5ccc0189e10a
 ref table 'bi repurchase_baseline_evaluation'
+ref table 'bi repurchase_model_evaluation'
 ref table LocalDateTable_6de4c7ec-ae59-4cde-91cc-ba6450b88c78
 ref table LocalDateTable_f8dd6cec-88af-49d1-b255-dda616be39b9
 ref table LocalDateTable_59688965-dc2e-42d7-8067-42342aed88dd

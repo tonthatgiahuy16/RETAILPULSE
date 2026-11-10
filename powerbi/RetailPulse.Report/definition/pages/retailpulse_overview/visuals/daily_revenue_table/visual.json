@@ -1,15 +1,17 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "daily_revenue_table",
+  "howCreated": "Default",
   "position": {
-    "x": 1220,
-    "y": 210,
+    "x": 1420,
+    "y": 190,
     "z": 0,
     "height": 450,
-    "width": 660
+    "width": 460
   },
   "visual": {
     "visualType": "tableEx",
+    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Values": {
@@ -25,7 +27,9 @@
                   "Property": "event_date"
                 }
               },
-              "queryRef": "Date"
+              "queryRef": "Date",
+              "displayName": "Date",
+              "active": true
             },
             {
               "field": {
@@ -38,25 +42,24 @@
                   "Property": "Gross sales amount"
                 }
               },
-              "queryRef": "Gross sales"
+              "queryRef": "Gross (\u00a3)",
+              "displayName": "Gross (\u00a3)",
+              "active": true
             },
             {
               "field": {
-                "Aggregation": {
+                "Measure": {
                   "Expression": {
-                    "Column": {
-                      "Expression": {
-                        "SourceRef": {
-                          "Entity": "bi sales_daily"
-                        }
-                      },
-                      "Property": "cancellation_signed_amount"
+                    "SourceRef": {
+                      "Entity": "bi sales_daily"
                     }
                   },
-                  "Function": 0
+                  "Property": "Cancellations (signed)"
                 }
               },
-              "queryRef": "Cancellations (signed)"
+              "queryRef": "Cancelled (\u00a3)",
+              "displayName": "Cancelled (\u00a3)",
+              "active": true
             },
             {
               "field": {
@@ -69,7 +72,9 @@
                   "Property": "Net transaction amount"
                 }
               },
-              "queryRef": "Net transaction"
+              "queryRef": "Net (\u00a3)",
+              "displayName": "Net (\u00a3)",
+              "active": true
             }
           ]
         }
@@ -95,8 +100,27 @@
             }
           }
         }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Reconciled staging to mart totals by event date; the Total row spans the whole snapshot'"
+                }
+              }
+            }
+          }
+        }
       ]
-    },
-    "drillFilterOtherVisuals": true
+    }
   }
 }

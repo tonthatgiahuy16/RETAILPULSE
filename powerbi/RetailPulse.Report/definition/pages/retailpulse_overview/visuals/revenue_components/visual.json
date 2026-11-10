@@ -1,15 +1,17 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "revenue_components",
+  "howCreated": "Default",
   "position": {
     "x": 40,
-    "y": 680,
+    "y": 660,
     "z": 0,
-    "height": 360,
+    "height": 380,
     "width": 1840
   },
   "visual": {
-    "visualType": "clusteredColumnChart",
+    "visualType": "lineChart",
+    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Category": {
@@ -25,7 +27,8 @@
                   "Property": "event_date"
                 }
               },
-              "queryRef": "event_date",
+              "queryRef": "Event date",
+              "displayName": "Event date",
               "active": true
             }
           ]
@@ -43,25 +46,24 @@
                   "Property": "Gross sales amount"
                 }
               },
-              "queryRef": "Gross sales"
+              "queryRef": "Gross sales (\u00a3)",
+              "displayName": "Gross sales (\u00a3)",
+              "active": true
             },
             {
               "field": {
-                "Aggregation": {
+                "Measure": {
                   "Expression": {
-                    "Column": {
-                      "Expression": {
-                        "SourceRef": {
-                          "Entity": "bi sales_daily"
-                        }
-                      },
-                      "Property": "cancellation_signed_amount"
+                    "SourceRef": {
+                      "Entity": "bi sales_daily"
                     }
                   },
-                  "Function": 0
+                  "Property": "Cancellations (signed)"
                 }
               },
-              "queryRef": "Cancellation signed"
+              "queryRef": "Cancellations (\u00a3)",
+              "displayName": "Cancellations (\u00a3)",
+              "active": true
             }
           ]
         }
@@ -81,14 +83,33 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Gross sales and signed cancellations by event date'"
+                  "Value": "'Gross sales vs signed cancellations (\u00a3)'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Indigo: positive sale volume | Rose: negative signed cancellation volume'"
                 }
               }
             }
           }
         }
       ]
-    },
-    "drillFilterOtherVisuals": true
+    }
   }
 }

@@ -1,15 +1,17 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "priority_table",
+  "howCreated": "Default",
   "position": {
     "x": 40,
-    "y": 680,
+    "y": 660,
     "z": 0,
-    "height": 360,
-    "width": 1840
+    "height": 380,
+    "width": 724
   },
   "visual": {
     "visualType": "tableEx",
+    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Values": {
@@ -25,7 +27,9 @@
                   "Property": "customer_id"
                 }
               },
-              "queryRef": "Customer ID"
+              "queryRef": "Customer ID",
+              "displayName": "Customer ID",
+              "active": true
             },
             {
               "field": {
@@ -38,7 +42,9 @@
                   "Property": "primary_country"
                 }
               },
-              "queryRef": "Country"
+              "queryRef": "Country",
+              "displayName": "Country",
+              "active": true
             },
             {
               "field": {
@@ -51,11 +57,14 @@
                   "Property": "priority_segment"
                 }
               },
-              "queryRef": "Segment"
+              "queryRef": "RFM Segment",
+              "displayName": "RFM Segment",
+              "active": true
             },
             {
               "field": {
                 "Aggregation": {
+                  "Function": 0,
                   "Expression": {
                     "Column": {
                       "Expression": {
@@ -65,15 +74,17 @@
                       },
                       "Property": "frequency"
                     }
-                  },
-                  "Function": 0
+                  }
                 }
               },
-              "queryRef": "Frequency"
+              "queryRef": "Orders",
+              "displayName": "Orders",
+              "active": true
             },
             {
               "field": {
                 "Aggregation": {
+                  "Function": 0,
                   "Expression": {
                     "Column": {
                       "Expression": {
@@ -83,29 +94,27 @@
                       },
                       "Property": "monetary_amount"
                     }
-                  },
-                  "Function": 0
+                  }
                 }
               },
-              "queryRef": "Monetary amount"
+              "queryRef": "Total Spend (\u00a3)",
+              "displayName": "Total Spend (\u00a3)",
+              "active": true
             },
             {
               "field": {
-                "Aggregation": {
+                "Column": {
                   "Expression": {
-                    "Column": {
-                      "Expression": {
-                        "SourceRef": {
-                          "Entity": "bi customer_lifecycle_snapshot"
-                        }
-                      },
-                      "Property": "priority_rank"
+                    "SourceRef": {
+                      "Entity": "bi customer_lifecycle_snapshot"
                     }
                   },
-                  "Function": 0
+                  "Property": "priority_rank"
                 }
               },
-              "queryRef": "Priority rank"
+              "queryRef": "Priority Rank",
+              "displayName": "Priority Rank",
+              "active": true
             },
             {
               "field": {
@@ -118,10 +127,29 @@
                   "Property": "is_within_illustrative_budget"
                 }
               },
-              "queryRef": "Within illustrative budget"
+              "queryRef": "In Budget (Top 500)",
+              "displayName": "In Budget (Top 500)",
+              "active": true
             }
           ]
         }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "bi customer_lifecycle_snapshot"
+                  }
+                },
+                "Property": "priority_rank"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ]
       }
     },
     "visualContainerObjects": {
@@ -138,14 +166,33 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Customer-priority detail — descriptive, not propensity scoring'"
+                  "Value": "'Customer priority decision ranking'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Descriptive RFM prioritisation table sorted by priority rank (not learned propensity scoring)'"
                 }
               }
             }
           }
         }
       ]
-    },
-    "drillFilterOtherVisuals": true
+    }
   }
 }

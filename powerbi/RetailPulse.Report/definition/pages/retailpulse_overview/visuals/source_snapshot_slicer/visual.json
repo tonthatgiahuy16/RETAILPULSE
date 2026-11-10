@@ -1,15 +1,17 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "source_snapshot_slicer",
+  "howCreated": "Default",
   "position": {
     "x": 1528,
-    "y": 40,
+    "y": 36,
     "z": 0,
-    "height": 150,
+    "height": 134,
     "width": 352
   },
   "visual": {
     "visualType": "slicer",
+    "drillFilterOtherVisuals": true,
     "query": {
       "queryState": {
         "Values": {
@@ -25,19 +27,13 @@
                   "Property": "source_file_id"
                 }
               },
-              "queryRef": "source_file_id",
+              "queryRef": "Snapshot ID",
+              "displayName": "Snapshot ID",
               "active": true
             }
           ]
         }
       }
-    },
-    "objects": {
-      "general": [
-        {
-          "properties": {}
-        }
-      ]
     },
     "visualContainerObjects": {
       "title": [
@@ -59,8 +55,27 @@
             }
           }
         }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Select audited data batch'"
+                }
+              }
+            }
+          }
+        }
       ]
-    },
-    "drillFilterOtherVisuals": true
+    }
   }
 }
