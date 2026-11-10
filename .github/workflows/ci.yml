@@ -44,6 +44,13 @@ jobs:
         run: python scripts/validate_powerbi_project.py
       - name: Bootstrap a clean database with the operational runner
         run: python scripts/run_pipeline.py
+      - name: Run the governed DAG once
+        run: python scripts/run_dag.py --output data/processed/orchestration/ci_run.json
+      - name: Upload the DAG run record
+        uses: actions/upload-artifact@v4
+        with:
+          name: dag-run-record
+          path: data/processed/orchestration/ci_run.json
       - name: Run dbt contract build
         run: |
           cp dbt/profiles.example.yml dbt/profiles.yml
