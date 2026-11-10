@@ -156,6 +156,67 @@ def train_and_report(connection: Any, requested_source_file_id: int | None) -> d
     }
 
 
+def persist_evaluation(connection: Any, report: dict[str, Any]) -> None:
+    """Store the temporal backtest so the BI layer can compare model and rule."""
+
+    metrics = report["holdout_evaluation"]
+    rows = [
+        (
+            "logistic_regression_v1",
+            0.5,
+            metrics["logistic_regression"],
+            "Learned logistic regression scored at threshold 0.5; higher precision and lower recall than the rule baseline.",
+        ),
+        (
+            "frequency_gte_2_rule",
+            None,
+            metrics["frequency_gte_2_baseline"],
+            "Rule baseline: predicts repurchase when observation frequency is at least 2.",
+        ),
+    ]
+    with connection.cursor() as cursor:
+        for model_name, threshold, values, note in rows:
+            cursor.execute(
+                """
+                insert into mart.repurchase_model_evaluation (
+                    source_file_id, model_name, evaluated_at, decision_threshold,
+                    customer_count, positive_customer_count, positive_rate,
+                    precision_at_threshold, recall_at_threshold,
+                    pr_auc, roc_auc, lift_at_top_20_percent, brier_score, evaluation_note
+                ) values (%s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                on conflict (source_file_id, model_name) do update set
+                    evaluated_at = excluded.evaluated_at,
+                    decision_threshold = excluded.decision_threshold,
+                    customer_count = excluded.customer_count,
+                    positive_customer_count = excluded.positive_customer_count,
+                    positive_rate = excluded.positive_rate,
+                    precision_at_threshold = excluded.precision_at_threshold,
+                    recall_at_threshold = excluded.recall_at_threshold,
+                    pr_auc = excluded.pr_auc,
+                    roc_auc = excluded.roc_auc,
+                    lift_at_top_20_percent = excluded.lift_at_top_20_percent,
+                    brier_score = excluded.brier_score,
+                    evaluation_note = excluded.evaluation_note
+                """,
+                (
+                    report["source_file_id"],
+                    model_name,
+                    threshold,
+                    values["customer_count"],
+                    values["positive_customer_count"],
+                    values["positive_rate"],
+                    values["precision_at_0_5"],
+                    values["recall_at_0_5"],
+                    values["pr_auc"],
+                    values["roc_auc"],
+                    values["lift_at_top_20_percent"],
+                    values.get("brier_score"),
+                    note,
+                ),
+            )
+    connection.commit()
+
+
 def main() -> None:
     args = parse_args()
     dsn = os.environ.get(args.dsn_env)
@@ -164,6 +225,7 @@ def main() -> None:
     connection = connect_from_dsn(dsn)
     try:
         report = train_and_report(connection, args.source_file_id)
+        persist_evaluation(connection, report)
     finally:
         connection.close()  # type: ignore[attr-defined]
     args.output.parent.mkdir(parents=True, exist_ok=True)
