@@ -68,7 +68,11 @@ class BuildDashboardTests(unittest.TestCase):
         bad_eval_file.write_text(json.dumps(eval_payload), encoding="utf-8")
 
         with self.assertRaisesRegex(ValueError, "Missing budget fraction K=0.3"):
-            build_dashboard(eval_path=bad_eval_file, output_path=self.temp_path / "out.html")
+            build_dashboard(
+                eval_path=bad_eval_file,
+                run_path=RUN_FIXTURE_PATH,
+                output_path=self.temp_path / "out.html",
+            )
 
     def test_rejects_snapshot_mismatch_between_run_and_model(self) -> None:
         eval_payload = json.loads(EVAL_FIXTURE_PATH.read_text(encoding="utf-8"))
@@ -77,7 +81,11 @@ class BuildDashboardTests(unittest.TestCase):
         bad_eval_file.write_text(json.dumps(eval_payload), encoding="utf-8")
 
         with self.assertRaisesRegex(ValueError, "Snapshot ID mismatch"):
-            build_dashboard(eval_path=bad_eval_file, output_path=self.temp_path / "out.html")
+            build_dashboard(
+                eval_path=bad_eval_file,
+                run_path=RUN_FIXTURE_PATH,
+                output_path=self.temp_path / "out.html",
+            )
 
 
 if __name__ == "__main__":
