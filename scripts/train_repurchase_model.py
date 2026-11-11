@@ -10,7 +10,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from retailpulse.modeling.decision_report import distribution_summary, evaluate_ranking
+from retailpulse.modeling.decision_report import (
+    bootstrap_precision_comparison,
+    cutoff_overlap_diagnostics,
+    distribution_summary,
+    evaluate_ranking,
+)
 from retailpulse.modeling.repurchase import (
     PREDICTION_DAYS,
     OBSERVATION_DAYS,
@@ -25,6 +30,8 @@ from retailpulse.pipeline_runner import connect_from_dsn
 FEATURE_NAMES = ("observation_recency_days", "observation_frequency", "observation_monetary_amount")
 LIFT_FRACTION = 0.20
 DECISION_FRACTIONS = (0.10, 0.20, 0.30)
+BOOTSTRAP_ITERATIONS = 2_000
+BOOTSTRAP_SEED = 20261111
 
 
 def parse_args() -> argparse.Namespace:
@@ -220,22 +227,23 @@ def _decision_comparison(
             "metrics": evaluate_ranking(rows, rank_key=rank_key, tie_key=tie_key, fractions=DECISION_FRACTIONS),
         }
 
+    precision_bootstrap = bootstrap_precision_comparison(
+        base_rows,
+        left_rank_key=methods["frequency_business"][1],
+        right_rank_key=lambda row: (-probability_by_id[row["customer_id"]], row["customer_id"]),
+        fractions=DECISION_FRACTIONS,
+        iterations=BOOTSTRAP_ITERATIONS,
+        seed=BOOTSTRAP_SEED,
+    )
+
     business_rules = ("rfm_priority_019", "frequency_business")
     average_precision = {
         name: sum(item["precision_at_k"] for item in output[name]["metrics"]) / len(DECISION_FRACTIONS)
         for name in ("rfm_priority_019", "frequency_business", "logistic_regression")
     }
     winning_rule = max(business_rules, key=lambda name: (average_precision[name], name == "rfm_priority_019"))
-    lr_beats_rule_at_all_k = all(
-        lr["precision_at_k"] > max(rfm["precision_at_k"], frequency["precision_at_k"])
-        for lr, rfm, frequency in zip(
-            output["logistic_regression"]["metrics"],
-            output["rfm_priority_019"]["metrics"],
-            output["frequency_business"]["metrics"],
-            strict=True,
-        )
-    )
-    recommendation = "logistic_regression" if lr_beats_rule_at_all_k else winning_rule
+    frequency_business_is_distinct = all(item["ci_lower"] > 0 for item in precision_bootstrap)
+    recommendation = winning_rule
     selected_rule_deltas = [
         {
             "budget_fraction": rule_metric["budget_fraction"],
@@ -259,16 +267,17 @@ def _decision_comparison(
         delta_explanations.append(f"at K={item['budget_fraction']:.0%}, it {comparison_text}")
     output["recommendation"] = {
         "method": recommendation,
-        "rule": "Choose LR only when its precision_at_k is strictly above both business rules at every tested K; otherwise choose the rule with the best mean precision_at_k, preferring contract 019 on an exact tie.",
+        "rule": "Choose a simpler rule by default unless a pre-specified comparison shows a practically meaningful and bootstrap-supported precision@K advantage for LR across tested capacities and future temporal holdouts.",
         "mean_precision_at_k": average_precision,
         "precision_difference_vs_logistic_regression": selected_rule_deltas,
+        "precision_bootstrap_vs_logistic_regression": precision_bootstrap,
         "reason": (
-            "LR strictly leads both business rules at K=10%, 20%, and 30% on this holdout."
-            if lr_beats_rule_at_all_k
+            "Frequency business has a positive bootstrap CI versus LR at every tested K on this holdout. This is still one temporal holdout, so the result requires rolling-origin replication before claiming stable superiority."
+            if frequency_business_is_distinct
             else (
-                f"LR does not strictly lead both business rules at every tested K; {recommendation} has the highest mean precision@K among the simple rules. "
+                f"{recommendation} has the highest mean precision@K among the simple rules. "
                 + "; ".join(delta_explanations)
-                + ". The rule is easier to explain and the holdout provides no ranking gain that justifies LR's added model complexity."
+                + ". The paired bootstrap confidence interval includes zero for at least one K, so this one holdout does not establish a precision difference from LR. Use the rule for its simpler explanation, not because it is proven superior."
             )
         ),
     }
@@ -309,6 +318,13 @@ def _training_diagnostics(train: tuple[RepurchaseExample, ...], holdout: tuple[R
     }
 
 
+def _rolling_cutoff_overlap(examples: tuple[RepurchaseExample, ...]) -> dict[str, Any]:
+    customer_ids_by_cutoff: dict[str, set[str]] = {}
+    for row in examples:
+        customer_ids_by_cutoff.setdefault(row.prediction_start_date.isoformat(), set()).add(row.customer_id)
+    return cutoff_overlap_diagnostics(customer_ids_by_cutoff)
+
+
 def _write_markdown_report(report: dict[str, Any], path: Path) -> None:
     comparison = report["decision_comparison"]
     rows = []
@@ -321,6 +337,7 @@ def _write_markdown_report(report: dict[str, Any], path: Path) -> None:
                 f"{'yes' if metric['cut_through_tie_block'] else 'no'} |"
             )
     diagnostics = report["training_diagnostics"]
+    overlap = report["rolling_cutoff_overlap"]
     model_metrics = report["holdout_evaluation"]["logistic_regression"]
     log_metrics = report["holdout_evaluation"]["log1p_logistic_regression_sensitivity"]
     cutoff_rows = [
@@ -341,6 +358,20 @@ def _write_markdown_report(report: dict[str, Any], path: Path) -> None:
                 f"{calibration_bin['customer_count']:,} | {calibration_bin['mean_predicted_probability']:.1%} | "
                 f"{calibration_bin['actual_repurchase_rate']:.1%} |"
             )
+    bootstrap_rows = []
+    for item in comparison["recommendation"]["precision_bootstrap_vs_logistic_regression"]:
+        bootstrap_rows.append(
+            f"| {item['budget_fraction']:.0%} | {item['observed_difference']:+.3%} | "
+            f"[{item['ci_lower']:+.3%}, {item['ci_upper']:+.3%}] | "
+            f"{'yes' if item['ci_includes_zero'] else 'no'} |"
+        )
+    overlap_rows = []
+    for pair in overlap["pairs"]:
+        overlap_rows.append(
+            f"| {pair['left_prediction_start_date']} | {pair['right_prediction_start_date']} | "
+            f"{pair['shared_customer_count']:,} | {pair['jaccard_similarity']:.3f} | "
+            f"{pair['right_customers_seen_in_left']:.1%} |"
+        )
     lines = [
         "# Retention priority decision report",
         "",
@@ -357,6 +388,24 @@ def _write_markdown_report(report: dict[str, Any], path: Path) -> None:
         "| Method | K | Selected | Precision@K | Recall@K | Lift@K | Boundary tie size | Slots decided within tie | Cut through tie? |",
         "|---|---:|---:|---:|---:|---:|---:|---:|:---:|",
         *rows,
+        "",
+        "### Precision@K uncertainty: business frequency vs LR",
+        "",
+        f"Paired customer bootstrap with {BOOTSTRAP_ITERATIONS:,} replicates, 95% percentile CI, and seed `{BOOTSTRAP_SEED}`. Rankings and selected K membership remain fixed from this holdout; the CI measures observed-label precision uncertainty, not refit-model or future-period uncertainty.",
+        "",
+        "| K | Difference (frequency business - LR) | 95% CI | CI includes zero? |",
+        "|---|---:|---:|:---:|",
+        *bootstrap_rows,
+        "",
+        "If a CI includes zero, the report does not claim that frequency business beats LR at that capacity. The result remains evidence from one holdout even when a CI excludes zero.",
+        "",
+        "### Rolling-origin customer overlap",
+        "",
+        f"{overlap['cutoff_count']} cutoffs produce {overlap['pair_count']} pairwise comparisons. Customers repeat across cutoffs: {'yes' if overlap['customers_repeat_across_cutoffs'] else 'no'}. Repeated customers mean cutoff rows are not independent customer samples; do not treat an average across these cutoffs as an independent-sample confidence interval.",
+        "",
+        "| Earlier cutoff | Later cutoff | Shared customers | Jaccard similarity | Later customers seen earlier |",
+        "|---|---|---:|---:|---:|",
+        *overlap_rows,
         "",
         "## Calibration and train/holdout diagnostics",
         "",
@@ -387,7 +436,7 @@ def _write_markdown_report(report: dict[str, Any], path: Path) -> None:
         "## Assumptions and limits",
         "",
         "- No incremental revenue or campaign cost is estimated in this report. Any later cost or revenue scenario must be labeled **simulation based on assumptions**, not actual ROI.",
-        "- Ranking results use one source snapshot and one temporal holdout. A repeated temporal holdout is needed before operational use.",
+        "- Ranking results use one source snapshot and one temporal holdout. Rolling-origin cutoffs reuse customers, so they show temporal stability but are not independent customer samples. Independent source snapshots or a pre-specified blocked evaluation are needed before operational use.",
         "- Frequency naive uses `customer_id ASC` inside frequency ties; frequency business adds monetary and recency before ID. Boundary diagnostics show how many selected customers depend on that tie rule.",
         "",
     ]
@@ -436,7 +485,8 @@ def train_and_report(connection: Any, requested_source_file_id: int | None) -> d
         cursor.execute("select min(event_at)::date from mart.customer_purchase_event where source_file_id = %s", (source_file_id,))
         first_event = cursor.fetchone()[0]
     starts = rolling_prediction_starts(first_event, holdout_start)
-    train, holdout = split_temporally(_examples(connection, source_file_id, starts), holdout_start)
+    all_examples = _examples(connection, source_file_id, starts)
+    train, holdout = split_temporally(all_examples, holdout_start)
     assert_published_holdout_matches(holdout, _published_holdout(connection, source_file_id))
     labels = lambda rows: [int(x.repurchased_in_prediction_window) for x in rows]
     holdout_labels = labels(holdout)
@@ -454,6 +504,7 @@ def train_and_report(connection: Any, requested_source_file_id: int | None) -> d
             "frequency_gte_2_baseline": _metrics(holdout, baseline_scores, holdout_labels, [int(x.observation_frequency >= 2) for x in holdout], False),
         },
         "training_diagnostics": _training_diagnostics(train, holdout),
+        "rolling_cutoff_overlap": _rolling_cutoff_overlap(all_examples),
         "decision_comparison": _decision_comparison(holdout, _priority_backtest(connection, source_file_id), probabilities, log_probabilities),
         "limits": ["Historical temporal backtest of observed repurchase, not campaign response, uplift, or ROI.", "No propensity scores are written to decision tables.", "Cost or revenue scenarios, if added later, must be labeled simulation based on assumptions."],
     }

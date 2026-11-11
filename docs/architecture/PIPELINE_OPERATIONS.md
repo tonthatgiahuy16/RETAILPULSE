@@ -12,7 +12,22 @@ Migration files are immutable once released. The `not yet executed` wording at t
 
 Migration 006 replaces the reconciliation view without changing its columns or gate contract. It aggregates staging counts, transaction classes, and expected mart-day coverage in one reference to `stg.online_retail_transaction`; the separate mart SQL gate still reconciles the actual mart view. This avoids every direct or indirect additional staging expansion from migration 004. Measure `EXPLAIN (ANALYZE, BUFFERS)` on the target PostgreSQL database before and after applying it; row counts alone do not establish an improvement.
 
+Migration 023 keeps that contract current for the post-022 `ADJUSTMENT` class. It appends `adjustment_row_count` to the end of the view's column list (a `CREATE OR REPLACE VIEW` requirement) and the gate sum now covers `SALE + CANCELLATION + ADJUSTMENT + QUARANTINE = staging_row_count`.
+
 SQL gates run only after migrations and optional ingestion. They execute inside a transaction that is rolled back after success, so checks do not leave durable state. A failed gate also rolls back its check transaction and exits non-zero; it does not claim the snapshot published.
+
+## Materialized-view refresh visibility
+
+The runner refreshes its eight materialized views sequentially in one database
+transaction and commits only after the final refresh. From successful raw
+ingestion until that commit, consumers of a materialized relation see its last
+committed version (or may wait on the refresh lock); they must not treat it as
+fresh for the new snapshot. If any refresh fails, the transaction rolls back
+and all eight relations retain their prior committed versions. The runner has
+no durable refresh-status table: the invocation result and successful SQL gates
+are the available evidence. Applying a migration that changes staging semantics
+without an ingestion does not itself refresh dependent materialized views; run
+the governed refresh before relying on `dw` or `bi.sales_line`.
 
 Migration 020 adds read-only `bi` semantic views for Power BI. Gate 020 proves
 that these views remain snapshot-aware projections of their published sources;

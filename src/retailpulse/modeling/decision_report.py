@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import math
+import random
 from collections.abc import Callable, Mapping, Sequence
+from itertools import combinations
 from typing import Any
 
 
@@ -94,3 +96,114 @@ def evaluate_ranking(
             }
         )
     return output
+
+
+def _percentile(values: Sequence[float], fraction: float) -> float:
+    if not values:
+        raise ValueError("Cannot calculate a percentile from empty values")
+    return _quantile([float(value) for value in values], fraction)
+
+
+def _selected_customer_ids(
+    rows: Sequence[Mapping[str, Any]], rank_key: Callable[[Mapping[str, Any]], Any], fraction: float
+) -> set[str]:
+    if not 0 < fraction <= 1:
+        raise ValueError("Budget fractions must be in (0, 1]")
+    selected_count = max(1, math.ceil(len(rows) * fraction))
+    return {str(row["customer_id"]) for row in sorted(rows, key=rank_key)[:selected_count]}
+
+
+def bootstrap_precision_comparison(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    left_rank_key: Callable[[Mapping[str, Any]], Any],
+    right_rank_key: Callable[[Mapping[str, Any]], Any],
+    fractions: Sequence[float] = (0.10, 0.20, 0.30),
+    iterations: int = 2_000,
+    seed: int = 20261111,
+    confidence_level: float = 0.95,
+) -> list[dict[str, Any]]:
+    """Paired customer bootstrap CI for fixed-ranking precision@K differences.
+
+    Rankings and K membership remain fixed from the original holdout. Each
+    replicate samples customers with replacement, preserving whether each
+    customer belongs to either selected list and its observed label.
+    """
+
+    if len(rows) < 2:
+        raise ValueError("Bootstrap comparison requires at least two holdout customers")
+    if iterations < 100:
+        raise ValueError("Bootstrap comparison requires at least 100 iterations")
+    if not 0 < confidence_level < 1:
+        raise ValueError("Confidence level must be in (0, 1)")
+    customer_ids = [str(row["customer_id"]) for row in rows]
+    if len(set(customer_ids)) != len(customer_ids):
+        raise ValueError("Bootstrap comparison requires unique customer_id values")
+    rng = random.Random(seed)
+    alpha = (1 - confidence_level) / 2
+    output = []
+    for fraction in fractions:
+        left_selected = _selected_customer_ids(rows, left_rank_key, fraction)
+        right_selected = _selected_customer_ids(rows, right_rank_key, fraction)
+        left_precision = sum(bool(row["label"]) for row in rows if str(row["customer_id"]) in left_selected) / len(left_selected)
+        right_precision = sum(bool(row["label"]) for row in rows if str(row["customer_id"]) in right_selected) / len(right_selected)
+        replicates = []
+        for _ in range(iterations):
+            sampled = [rows[rng.randrange(len(rows))] for _ in range(len(rows))]
+            left_members = [row for row in sampled if str(row["customer_id"]) in left_selected]
+            right_members = [row for row in sampled if str(row["customer_id"]) in right_selected]
+            if not left_members or not right_members:
+                continue
+            left_bootstrap = sum(bool(row["label"]) for row in left_members) / len(left_members)
+            right_bootstrap = sum(bool(row["label"]) for row in right_members) / len(right_members)
+            replicates.append(left_bootstrap - right_bootstrap)
+        if len(replicates) < iterations * 0.90:
+            raise ValueError("Too many bootstrap replicates had an empty selected group")
+        ci_lower = _percentile(replicates, alpha)
+        ci_upper = _percentile(replicates, 1 - alpha)
+        output.append(
+            {
+                "budget_fraction": fraction,
+                "method": "paired_customer_bootstrap_fixed_ranking",
+                "iterations": iterations,
+                "seed": seed,
+                "confidence_level": confidence_level,
+                "left_precision_at_k": left_precision,
+                "right_precision_at_k": right_precision,
+                "observed_difference": left_precision - right_precision,
+                "ci_lower": ci_lower,
+                "ci_upper": ci_upper,
+                "ci_includes_zero": ci_lower <= 0 <= ci_upper,
+                "interpretation": "CI conditions on the rankings fitted to this holdout; it measures uncertainty in observed-label precision, not refit-model or future-period uncertainty.",
+            }
+        )
+    return output
+
+
+def cutoff_overlap_diagnostics(customer_ids_by_cutoff: Mapping[str, set[str]]) -> dict[str, Any]:
+    """Report customer reuse among rolling temporal cutoffs."""
+
+    ordered = sorted((str(cutoff), set(customer_ids)) for cutoff, customer_ids in customer_ids_by_cutoff.items())
+    pairs = []
+    for (left_cutoff, left_ids), (right_cutoff, right_ids) in combinations(ordered, 2):
+        shared = left_ids & right_ids
+        union = left_ids | right_ids
+        pairs.append(
+            {
+                "left_prediction_start_date": left_cutoff,
+                "right_prediction_start_date": right_cutoff,
+                "left_customer_count": len(left_ids),
+                "right_customer_count": len(right_ids),
+                "shared_customer_count": len(shared),
+                "jaccard_similarity": len(shared) / len(union) if union else 0.0,
+                "left_customers_seen_in_right": len(shared) / len(left_ids) if left_ids else 0.0,
+                "right_customers_seen_in_left": len(shared) / len(right_ids) if right_ids else 0.0,
+            }
+        )
+    return {
+        "cutoff_count": len(ordered),
+        "pair_count": len(pairs),
+        "customers_repeat_across_cutoffs": any(pair["shared_customer_count"] > 0 for pair in pairs),
+        "pairs": pairs,
+        "interpretation": "Rows from different rolling cutoffs are not independent customer samples when customers recur; aggregate summaries across cutoffs must disclose this dependency.",
+    }

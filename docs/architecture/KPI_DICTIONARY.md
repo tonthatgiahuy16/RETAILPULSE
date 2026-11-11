@@ -25,12 +25,15 @@ unless a consumer documents why that comparison is valid.
 **Input:** published `stg.online_retail_transaction` rows where
 `transaction_class in ('SALE', 'CANCELLATION')`.
 
+Parse-valid non-`C` negative-quantity rows are `ADJUSTMENT` and are excluded
+from all revenue KPIs; see the [snapshot-scoped adjustment contract](../data/REVENUE_ADJUSTMENT_CONTRACT.md).
+
 | KPI | SQL definition | Missing-data treatment | Limit / label rule |
 |---|---|---|---|
 | Gross Sales | `sum(case when transaction_class = 'SALE' then quantity * unit_price else 0 end)` | Invalid required fields are `QUARANTINE` and excluded; missing Customer ID stays included. | Gross event-date sales, not invoiced, paid, or accounting revenue. |
 | Signed Cancellation Amount | `sum(case when transaction_class = 'CANCELLATION' then quantity * unit_price else 0 end)` | Same published staging boundary. | Preserves the source sign; not a matched-return amount. |
 | Net Transaction Amount | `sum(quantity * unit_price)`; equivalently gross sales plus signed cancellation amount. | Same published staging boundary. | Must not be relabelled as accounting net revenue. |
-| Transaction Row Count | `count(*)` of included staging rows. | Includes rows with missing Customer ID. | Counts source rows, not invoices or customers. |
+| Transaction Row Count | `count(*)` of included staging rows. | Includes rows with missing Customer ID; excludes `ADJUSTMENT`. | Counts source rows, not invoices or customers. |
 | Missing Customer ID Row Count | `count(*) filter (where is_missing_customer_id)` | Counted, never discarded from revenue. | Coverage diagnostic, not a customer count. |
 | Missing Customer ID Share | `missing_customer_id_row_count::numeric / nullif(transaction_row_count, 0)` | `NULL` with a zero denominator. | Derived ratio at the same grain; do not average daily shares without weighting. |
 
@@ -189,12 +192,17 @@ The temporal backtest run on 2026-11-11 reports:
 | Frequency business (`frequency DESC, monetary DESC, recency ASC, customer_id ASC`) | 95.0% / 15.4% | 91.0% / 29.4% | 86.1% / 41.8% |
 | Logistic Regression | 95.0% / 15.4% | 90.5% / 29.3% | 85.5% / 41.5% |
 
-On this holdout, frequency business is the recommended simple rule: it ties LR
-at 10% and leads by 0.539 and 0.598 percentage points in precision at 20% and
-30%. Frequency naive cuts through ties at every capacity: 61 of 72, 156 of 209,
-and 226 of 312 customers in the respective boundary-frequency groups are
-selected by its ID tie-breaker. This single source snapshot is not enough to
-claim stable superiority or campaign effectiveness.
+Frequency business is the simpler operational candidate on this holdout: it
+ties LR at 10% and has observed precision differences of +0.539 and +0.598
+percentage points at 20% and 30%. Its paired-customer bootstrap 95% confidence
+intervals contain zero at all three capacities: 10% `[-0.151, +0.151]` pp,
+20% `[-1.015, +2.000]` pp, and 30% `[-0.578, +1.784]` pp. The run therefore
+does not establish a precision difference from LR. Frequency naive cuts through
+ties at every capacity: 61 of 72, 156 of 209, and 226 of 312 customers in the
+respective boundary-frequency groups are selected by its ID tie-breaker.
+Repeated customers across rolling cutoffs make those cutoff rows dependent;
+neither this one holdout nor an unadjusted average across its cutoffs can claim
+stable superiority or campaign effectiveness.
 
 Calibration diagnostics for the same run show pooled training-example positive
 rate 46.9%, holdout positive rate 61.9%, and LR mean predicted probability
@@ -222,12 +230,14 @@ one `source_file_id` unless a documented comparison requires otherwise.
 
 | BI relation | KPI family | Grain | Limit |
 |---|---|---|---|
+| `bi.source_snapshot` | Snapshot filter/label | Successfully ingested source snapshot | One selected `source_file_id` per report; not a time series. |
 | `bi.sales_daily` | Revenue and Customer-ID coverage | Source snapshot × event date | Same definitions and event-date/accounting limitation as `mart.revenue_daily`. |
 | `bi.sales_line` | Product, country, time sales analysis | One `SALE` source row | Missing Customer ID stays present; cancellation rows are excluded. |
 | `bi.customer_lifecycle_snapshot` | RFM and current priority segment | Source snapshot × as-of date × customer | Descriptive rule, not a propensity score; capacity is illustrative only. |
 | `bi.customer_cohort_retention` | Cohort retention | Source snapshot × cohort month × activity month | Customer-event eligibility only; zero-retention months are retained. |
-| `bi.cancellation_diagnostic` | Cancellation candidate counts | Source snapshot × candidate status | Candidate diagnostics are not return-accounting facts. |
+| `bi.cancellation_diagnostic` | Cancellation candidate counts | Source snapshot × candidate status × candidate_reason | Candidate diagnostics are not return-accounting facts. |
 | `bi.repurchase_baseline_evaluation` | Label-baseline evaluation | Source snapshot × observation/prediction windows | Historical label result, not campaign response, uplift, or ROI. |
+| `bi.repurchase_model_evaluation` | Model backtest evaluation | Source snapshot × model name | Written only by the opt-in training step; not campaign response, uplift, or ROI. |
 
 See [Power BI semantic layer](POWER_BI_SEMANTIC_LAYER.md) for the view
 contracts, role provisioning, and refresh evidence boundary.

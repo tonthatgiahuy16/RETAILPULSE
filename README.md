@@ -99,9 +99,12 @@ database reconciliation for the specific run. The recorded local run on
 transaction rollback behavior. Those results are historical evidence, not a
 claim that the database is available or current in another environment.
 
-Local verification reported on 2026-11-10 (developer shell, not a hosted CI
-run): the four opt-in PostgreSQL integration tests passed, and
-`dbt build --project-dir dbt --profiles-dir dbt` finished with
+Local verification reported from a developer shell, not a hosted CI run:
+
+- On 2026-11-11, `python -m unittest tests.test_postgres_pipeline_integration -v`
+  ran against the isolated local `retailpulse_test` database and reported
+  `Ran 4 tests in 1.937s` followed by `OK`.
+- On 2026-11-10, `dbt build --project-dir dbt --profiles-dir dbt` finished with
 `PASS=16 WARN=0 ERROR=0 SKIP=0`, covering 2 models, 12 generic tests, and 2
 singular tests. These results are date-scoped to that environment.
 
@@ -171,15 +174,36 @@ git diff --check
 ```
 
 On 2026-11-10 these checks passed locally on the Power BI-saved files
-(`POWERBI_PROJECT=PASS`, 7 BI tables, 3 report pages), and the PBIP regression
+(`POWERBI_PROJECT=PASS`, 8 BI tables, 3 report pages), and the PBIP regression
 tests in `tests/test_powerbi_project_validation.py` passed. That is local
 static evidence; it does not claim a GitHub Actions run.
+
+CI runs only the unit/integration tests, `validate_powerbi_project.py`, the
+pipeline bootstrap, the governed DAG, and `dbt build`. The `py_compile` and
+`git diff --check` checks above are manual/local and are not part of the
+GitHub Actions workflow.
+
+The CI DAG command does not pass `--train-model`. It installs the model
+dependencies and verifies schema-related contracts through its other checks,
+but does not provide end-to-end CI evidence that a published label dataset can
+train a model and persist rows to `mart.repurchase_model_evaluation` or
+`bi.repurchase_model_evaluation`. Model training remains an opt-in local DAG
+task; the dated local evidence above and the decision report are the relevant
+runtime evidence for that path.
+
+CI also runs against an empty disposable database. Gates that depend on a
+published snapshot — the `022` adjustment baseline, `018` fact/staging
+equality, and `reconciliation_data_quality` — therefore pass trivially in CI
+and are only exercised by a local snapshot run.
 
 ## Interpretation guardrails
 
 - Revenue measures are event-date transaction amounts, not accounting
   revenue. Cancellation rows remain signed source events; candidate matches
   are diagnostics, not verified returns.
+- Parse-valid non-`C` rows with negative quantity are `ADJUSTMENT` and are
+  excluded from revenue; that label does not assert a confirmed return. See
+  [`docs/data/REVENUE_ADJUSTMENT_CONTRACT.md`](docs/data/REVENUE_ADJUSTMENT_CONTRACT.md).
 - Missing Customer ID rows remain in revenue totals and are excluded only by
   customer-level eligibility contracts.
 - RFM priority is descriptive. Repurchase evaluation uses historical labels;

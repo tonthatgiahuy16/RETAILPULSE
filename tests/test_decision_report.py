@@ -2,7 +2,12 @@
 
 import unittest
 
-from retailpulse.modeling.decision_report import distribution_summary, evaluate_ranking
+from retailpulse.modeling.decision_report import (
+    bootstrap_precision_comparison,
+    cutoff_overlap_diagnostics,
+    distribution_summary,
+    evaluate_ranking,
+)
 
 
 class DecisionReportTests(unittest.TestCase):
@@ -54,6 +59,44 @@ class DecisionReportTests(unittest.TestCase):
         self.assertEqual(result["count"], 4)
         self.assertEqual(result["p50"], 1.0)
         self.assertGreater(result["skewness"], 0)
+
+    def test_bootstrap_precision_difference_has_zero_width_for_identical_rankings(self) -> None:
+        rows = [
+            {"customer_id": "a", "label": True, "score": 4},
+            {"customer_id": "b", "label": False, "score": 3},
+            {"customer_id": "c", "label": True, "score": 2},
+            {"customer_id": "d", "label": False, "score": 1},
+        ]
+
+        result = bootstrap_precision_comparison(
+            rows,
+            left_rank_key=lambda row: -row["score"],
+            right_rank_key=lambda row: -row["score"],
+            fractions=(0.5,),
+            iterations=100,
+            seed=17,
+        )[0]
+
+        self.assertEqual(result["observed_difference"], 0.0)
+        self.assertEqual(result["ci_lower"], 0.0)
+        self.assertEqual(result["ci_upper"], 0.0)
+        self.assertTrue(result["ci_includes_zero"])
+
+    def test_cutoff_overlap_exposes_reused_customers(self) -> None:
+        result = cutoff_overlap_diagnostics(
+            {
+                "2020-01-01": {"a", "b", "c"},
+                "2020-04-01": {"b", "c", "d"},
+                "2020-07-01": {"e"},
+            }
+        )
+
+        self.assertEqual(result["cutoff_count"], 3)
+        self.assertEqual(result["pair_count"], 3)
+        first_pair = result["pairs"][0]
+        self.assertEqual(first_pair["shared_customer_count"], 2)
+        self.assertAlmostEqual(first_pair["jaccard_similarity"], 0.5)
+        self.assertTrue(result["customers_repeat_across_cutoffs"])
 
 
 if __name__ == "__main__":

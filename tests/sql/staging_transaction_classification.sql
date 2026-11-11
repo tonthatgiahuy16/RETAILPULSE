@@ -1,5 +1,6 @@
 -- Integration gate for migrations/001_raw_lineage.sql and
--- migrations/002_staging_transaction_classification.sql.
+-- migrations/002_staging_transaction_classification.sql and
+-- migrations/022_reclassify_non_c_negative_adjustments.sql.
 --
 -- Run against an isolated PostgreSQL database after loading a snapshot. A
 -- successful run has no output and no exception. This file makes no writes.
@@ -41,10 +42,10 @@ begin
 
     select count(*) into invalid_class_count
     from stg.online_retail_transaction
-    where transaction_class not in ('SALE', 'CANCELLATION', 'QUARANTINE');
+    where transaction_class not in ('SALE', 'CANCELLATION', 'ADJUSTMENT', 'QUARANTINE');
 
     if invalid_class_count <> 0 then
-        raise exception 'staging contains % rows outside the three transaction classes', invalid_class_count;
+        raise exception 'staging contains % rows outside the four transaction classes', invalid_class_count;
     end if;
 
     select count(*) into invalid_quarantine_count
