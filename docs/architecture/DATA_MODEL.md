@@ -183,6 +183,7 @@ erDiagram
 | `mart.customer_cohort_retention` | View | Source snapshot × cohort month × activity month | Dense calendar with zero retention rows. |
 | `mart.customer_repurchase_label_dataset` | View | Customer × source snapshot × temporal window | Leakage-bounded features and label. |
 | `mart.customer_repurchase_baseline_evaluation` | View | Source snapshot × temporal window | Frequency ≥ 2 baseline evaluation. |
+| `mart.repurchase_model_evaluation` | Physical table | Source snapshot × model name | Model and rule-baseline backtest metrics; written only by the opt-in training step. |
 | `dw.dim_date` | Materialized view | Calendar date | Conformed date dimension from staging timestamps. |
 | `dw.dim_customer` | Materialized view | Source snapshot × customer | First seen timestamp and deterministic primary country. |
 | `dw.dim_product` | Materialized view | Source snapshot × StockCode | Latest normalized description and heuristic special-item class. |
@@ -194,8 +195,9 @@ erDiagram
 | `bi.sales_line` | View | One `SALE` source row | Fact/dimension projection for product, country, and time visuals. |
 | `bi.customer_lifecycle_snapshot` | View | Source snapshot × as-of date × customer | RFM/priority semantic projection; not a model score. |
 | `bi.customer_cohort_retention` | View | Source snapshot × cohort month × activity month | Cohort semantic projection. |
-| `bi.cancellation_diagnostic` | View | Source snapshot × candidate status | Candidate-only diagnostic aggregate. |
+| `bi.cancellation_diagnostic` | View | Source snapshot × candidate status × candidate_reason | Candidate-only diagnostic aggregate. |
 | `bi.repurchase_baseline_evaluation` | View | Source snapshot × temporal label window | Historical baseline semantic projection. |
+| `bi.repurchase_model_evaluation` | View | Source snapshot × model name | Historical temporal backtest projection; not campaign response. |
 
 ## Boundaries
 

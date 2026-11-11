@@ -22,12 +22,17 @@ or write model propensity scores to PostgreSQL.
 | `bi.sales_line` | One `SALE` staging source row | `dw.fct_sales_line` + dimensions | Product, country, and time analysis. |
 | `bi.customer_lifecycle_snapshot` | Source snapshot × RFM as-of date × customer | `decision.customer_priority_snapshot` | RFM and descriptive priority segmentation. |
 | `bi.customer_cohort_retention` | Source snapshot × cohort month × activity month | `mart.customer_cohort_retention` | Cohort heatmap/retention curve. |
-| `bi.cancellation_diagnostic` | Source snapshot × candidate status | `int.cancellation_match_resolution` | Candidate diagnostic counts only; includes candidate_reason since 2026-11-10. |
+| `bi.cancellation_diagnostic` | Source snapshot × candidate status × candidate_reason | `int.cancellation_match_resolution` | Candidate diagnostic counts only; includes candidate_reason since 2026-11-10. |
 | `bi.repurchase_baseline_evaluation` | Source snapshot × label windows | `mart.customer_repurchase_baseline_evaluation` | Historical baseline evaluation. |
-| `bi.repurchase_model_evaluation | Source snapshot x model name | `mart.repurchase_model_evaluation` | Logistic regression vs rule baseline backtest. |
+| `bi.repurchase_model_evaluation` | Source snapshot × model name | `mart.repurchase_model_evaluation` | Logistic regression vs rule baseline backtest. |
 
-The SQL gate `tests/sql/020_powerbi_semantic_layer.sql` reconciles the BI
-views to their source contracts and verifies sales-line/customer grains.
+The SQL gate `tests/sql/020_powerbi_semantic_layer.sql` reconciles
+`bi.sales_daily`, `bi.sales_line`, `bi.customer_lifecycle_snapshot`,
+`bi.customer_cohort_retention`, and `bi.cancellation_diagnostic` to their source
+contracts and verifies sales-line/customer grains. It does **not** reconcile
+`bi.source_snapshot`, `bi.repurchase_baseline_evaluation`, or
+`bi.repurchase_model_evaluation`; no gate currently asserts those three
+relations.
 
 ## Interpretation rules carried into reports
 
