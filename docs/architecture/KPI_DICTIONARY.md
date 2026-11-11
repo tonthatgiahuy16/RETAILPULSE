@@ -152,8 +152,8 @@ and [Customer priority decision](CUSTOMER_PRIORITY_DECISION.md).
 
 ## Repurchase model evaluation
 
-**Artifact:** local ignored JSON output from
-`scripts/train_repurchase_model.py`.
+**Artifacts:** local ignored JSON output from `scripts/train_repurchase_model.py`
+and the versioned [retention-priority decision report](../decision/RETENTION_PRIORITY_DECISION.md).
 **Evaluation grain:** one customer at the final data-derived prediction cutoff.
 
 | Measure | Definition | Limit |
@@ -163,6 +163,51 @@ and [Customer priority decision](CUSTOMER_PRIORITY_DECISION.md).
 | Precision / Recall at 0.5 | Classification metrics using probability `>= 0.5`; baseline remains `observation_frequency >= 2`. | Threshold choice has a recall/precision trade-off. |
 | Lift at top 20% | Positive rate among top 20% ranked customers divided by holdout positive rate. | Historical ranking diagnostic; not incremental lift/uplift. |
 | Brier Score / Calibration Bins | Mean squared probability error and observed rate in five probability ranges. | Reported for probability model only; calibration needs more snapshots before operational use. |
+
+## Fixed-capacity retention selection
+
+**Cohort:** source snapshot `1`, SHA-256
+`bcbe73b35f5b7babf197fb0cb983a11f5d9ff929078d4aa53d171b1f2df2e980`;
+temporal holdout window `[2011-09-11, 2011-12-10)` with 2,784 customers.
+The positive label is at least one eligible purchase in that historical
+90-day window; it is not a campaign response.
+
+For a selected set of size `K = ceil(N * fraction)`:
+
+| Metric | Definition | Limit |
+|---|---|---|
+| Precision@K | Selected customers with a positive holdout label / selected customer count. | Observed historical purchase rate in the selected group. |
+| Recall@K | Selected customers with a positive holdout label / all positive holdout customers. | Coverage of holdout purchasers; not campaign impact. |
+| Lift@K | Precision@K / positive rate over the full holdout. | Ranking diagnostic; not incremental lift or uplift. |
+
+The temporal backtest run on 2026-11-11 reports:
+
+| Ranking | Precision@10% / Recall@10% | Precision@20% / Recall@20% | Precision@30% / Recall@30% |
+|---|---:|---:|---:|
+| RFM priority, contract 019 | 95.0% / 15.4% | 86.5% / 28.0% | 83.5% / 40.5% |
+| Frequency naive (`frequency DESC, customer_id ASC`) | 94.6% / 15.3% | 89.8% / 29.0% | 85.4% / 41.5% |
+| Frequency business (`frequency DESC, monetary DESC, recency ASC, customer_id ASC`) | 95.0% / 15.4% | 91.0% / 29.4% | 86.1% / 41.8% |
+| Logistic Regression | 95.0% / 15.4% | 90.5% / 29.3% | 85.5% / 41.5% |
+
+On this holdout, frequency business is the recommended simple rule: it ties LR
+at 10% and leads by 0.539 and 0.598 percentage points in precision at 20% and
+30%. Frequency naive cuts through ties at every capacity: 61 of 72, 156 of 209,
+and 226 of 312 customers in the respective boundary-frequency groups are
+selected by its ID tie-breaker. This single source snapshot is not enough to
+claim stable superiority or campaign effectiveness.
+
+Calibration diagnostics for the same run show pooled training-example positive
+rate 46.9%, holdout positive rate 61.9%, and LR mean predicted probability
+46.7%. The model uses `class_weight=None`; weighting is not the source of this
+run's gap. A log1p sensitivity on frequency and monetary does not reduce it.
+The 0.2-0.4 probability bin has 31.8% mean prediction and 46.0% observed rate;
+these are bin rates, not the full holdout rate. The observed prevalence shift
+is a plausible explanation, but the cutoffs do not establish seasonality as a
+cause.
+
+No campaign cost, incremental revenue, profit, ROI or causal uplift is
+estimated. Any later economic scenario must be labeled **simulation based on
+assumptions**.
 
 The model's rolling examples use 180 observation days and 90 prediction days.
 Earlier non-overlapping cutoffs train; the final cutoff must exactly match
