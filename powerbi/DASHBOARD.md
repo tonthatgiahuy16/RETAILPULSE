@@ -28,6 +28,7 @@ open the report and configure a local connection.
 | Overview | Monitor sales volume and Customer ID coverage | `bi.sales_daily` | One source snapshot × event date. Net transaction amount is event-date transaction amount, not accounting revenue. |
 | Customer lifecycle | Prioritise descriptive RFM segments and inspect retention | `bi.customer_lifecycle_snapshot`, `bi.customer_cohort_retention` | Customer snapshot and cohort-month activity. Priority is descriptive, not a propensity score; capacity is illustrative. |
 | Data quality & diagnostics | Inspect incomplete customer identity, cancellation candidates, and historical baseline outputs | `bi.sales_daily`, `bi.cancellation_diagnostic`, `bi.repurchase_baseline_evaluation`, `bi.source_snapshot` | Candidate cancellation matches are diagnostic only. Baseline labels are historical, not campaign response or causal uplift. |
+| Repurchase model evaluation | Inspect the persisted historical model backtest | `bi.repurchase_model_evaluation` | Source snapshot × model name. Snapshot-scoped cards show the persisted method count and Logistic Regression metrics; a comparison table and threshold trade-off chart compare Logistic Regression, log1p sensitivity, and Frequency Business. Missing methods stay missing and are surfaced by the method-count card. This is not a current-customer score, campaign response, uplift, or ROI result. |
 
 `Missing customer ID share` is a measure defined as total missing-Customer-ID
 rows divided by total transaction rows; it deliberately does not sum daily

@@ -1,0 +1,216 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "model_comparison",
+  "howCreated": "Default",
+  "position": {
+    "x": 40,
+    "y": 370,
+    "z": 0,
+    "height": 440,
+    "width": 1140
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "drillFilterOtherVisuals": true,
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi repurchase_model_evaluation"
+                    }
+                  },
+                  "Property": "model_display_name"
+                }
+              },
+              "queryRef": "Method",
+              "displayName": "Method",
+              "active": true
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi repurchase_model_evaluation"
+                    }
+                  },
+                  "Property": "Comparison decision threshold"
+                }
+              },
+              "queryRef": "Decision threshold",
+              "displayName": "Decision threshold",
+              "active": true
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi repurchase_model_evaluation"
+                    }
+                  },
+                  "Property": "Comparison holdout customers"
+                }
+              },
+              "queryRef": "Holdout customers",
+              "displayName": "Holdout customers",
+              "active": true
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi repurchase_model_evaluation"
+                    }
+                  },
+                  "Property": "Comparison precision at threshold"
+                }
+              },
+              "queryRef": "Precision @ threshold",
+              "displayName": "Precision @ threshold",
+              "active": true
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi repurchase_model_evaluation"
+                    }
+                  },
+                  "Property": "Comparison recall at threshold"
+                }
+              },
+              "queryRef": "Recall @ threshold",
+              "displayName": "Recall @ threshold",
+              "active": true
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi repurchase_model_evaluation"
+                    }
+                  },
+                  "Property": "Comparison PR-AUC"
+                }
+              },
+              "queryRef": "PR-AUC",
+              "displayName": "PR-AUC",
+              "active": true
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi repurchase_model_evaluation"
+                    }
+                  },
+                  "Property": "Comparison ROC-AUC"
+                }
+              },
+              "queryRef": "ROC-AUC",
+              "displayName": "ROC-AUC",
+              "active": true
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi repurchase_model_evaluation"
+                    }
+                  },
+                  "Property": "Comparison Lift at top 20%"
+                }
+              },
+              "queryRef": "Lift @ top 20%",
+              "displayName": "Lift @ top 20%",
+              "active": true
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "bi repurchase_model_evaluation"
+                    }
+                  },
+                  "Property": "Comparison Brier score"
+                }
+              },
+              "queryRef": "Brier score",
+              "displayName": "Brier score",
+              "active": true
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Holdout comparison: model and simple rule baseline'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Logistic Regression vs log1p sensitivity vs Frequency Business (frequency >= 2); one temporal holdout, not a claim of campaign uplift or ROI'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

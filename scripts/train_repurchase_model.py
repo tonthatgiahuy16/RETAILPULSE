@@ -529,6 +529,12 @@ def persist_evaluation(connection: Any, report: dict[str, Any]) -> None:
             "Learned logistic regression scored at threshold 0.5; higher precision and lower recall than the rule baseline.",
         ),
         (
+            "log1p_logistic_regression_sensitivity",
+            0.5,
+            metrics["log1p_logistic_regression_sensitivity"],
+            "Sensitivity only: logistic regression with log1p frequency and monetary features; not the operating recommendation.",
+        ),
+        (
             "frequency_gte_2_rule",
             None,
             metrics["frequency_gte_2_baseline"],
