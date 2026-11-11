@@ -26,13 +26,16 @@ or write model propensity scores to PostgreSQL.
 | `bi.repurchase_baseline_evaluation` | Source snapshot × label windows | `mart.customer_repurchase_baseline_evaluation` | Historical baseline evaluation. |
 | `bi.repurchase_model_evaluation` | Source snapshot × model name | `mart.repurchase_model_evaluation` | Logistic regression vs rule baseline backtest. |
 
-The SQL gate `tests/sql/020_powerbi_semantic_layer.sql` reconciles
-`bi.sales_daily`, `bi.sales_line`, `bi.customer_lifecycle_snapshot`,
-`bi.customer_cohort_retention`, and `bi.cancellation_diagnostic` to their source
-contracts and verifies sales-line/customer grains. It does **not** reconcile
-`bi.source_snapshot`, `bi.repurchase_baseline_evaluation`, or
-`bi.repurchase_model_evaluation`; no gate currently asserts those three
-relations.
+The SQL gate `tests/sql/020_powerbi_semantic_layer.sql` reconciles all eight
+Power BI views to their published source contracts:
+- `bi.source_snapshot` matches successfully ingested `ops.source_file` records;
+- `bi.sales_daily` reconciles with `mart.revenue_daily`;
+- `bi.sales_line` matches `dw.fct_sales_line` row counts and lineage;
+- `bi.customer_lifecycle_snapshot` matches `decision.customer_priority_snapshot`;
+- `bi.customer_cohort_retention` matches `mart.customer_cohort_retention`;
+- `bi.cancellation_diagnostic` asserts candidate diagnostic categories and interpretation labels;
+- `bi.repurchase_baseline_evaluation` reconciles with `mart.customer_repurchase_baseline_evaluation`;
+- `bi.repurchase_model_evaluation` reconciles with `mart.repurchase_model_evaluation` and asserts the backtest interpretation disclaimer.
 
 ## Interpretation rules carried into reports
 

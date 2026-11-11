@@ -44,6 +44,8 @@ jobs:
         run: python scripts/validate_powerbi_project.py
       - name: Bootstrap a clean database with the operational runner
         run: python scripts/run_pipeline.py
+      - name: Ingest temporal fixture and run data-backed SQL gates
+        run: python scripts/run_pipeline.py --workbook tests/fixtures/mini_retail.xlsx --source-uri https://example.test/retailpulse/mini_retail.xlsx --source-retrieved-at 2026-11-11T00:00:00+07:00
       - name: Run the governed DAG once
         run: python scripts/run_dag.py --output data/processed/orchestration/ci_run.json
       - name: Upload the DAG run record
