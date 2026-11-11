@@ -31,10 +31,12 @@ def main() -> None:
     first.append(HEADERS)
     second.append(HEADERS)
 
-    # The latest purchase is 2020-11-15. The derived 180-day observation
-    # window starts 2020-02-20 and the 90-day prediction window starts
-    # 2020-08-18, so repeated customers give both features and positive labels.
-    start = datetime(2020, 1, 1, 10, 0)
+    # The latest purchase is 2020-11-15, over 370 days after the first event.
+    # This supports two non-overlapping prediction cutoffs for --train-model.
+    # The published 180-day observation window starts 2020-02-20 and the
+    # 90-day prediction window starts 2020-08-18; repeated customers provide
+    # both observation features and positive labels.
+    start = datetime(2019, 11, 1, 10, 0)
     for index in range(160):
         event_at = start + timedelta(days=index * 2)
         customer_id = str(10000 + index % 12)
