@@ -6,6 +6,6 @@
 
 Missing Customer ID, missing stock code, invalid cancellation quantity, and no/multiple eligible sale candidates remain explicit reasons. Consumers must retain the source-row lineage columns when interpreting a candidate.
 
-`int.eligible_sale_line` and `int.cancellation_line` are refreshable materialized projections used only to make candidate evaluation tractable. The operational runner refreshes both after a successful ingestion and before gates; raw and staging remain the source of truth.
+`int.eligible_sale_line` and `int.cancellation_line` are refreshable materialized projections used only to make candidate evaluation tractable. The operational runner refreshes both after every governed ingestion attempt, including a same-hash skip, and before gates; raw and staging remain the source of truth.
 
 For source snapshot 1 on 2026-10-29, the heuristic produced 4,907 `MATCHED_CANDIDATE` rows (25.17%), 1,833 `AMBIGUOUS` rows (9.40%), and 12,754 `UNMATCHED` rows (65.43%) out of 19,494 cancellations. These are diagnostics for this snapshot, not return-accounting facts.

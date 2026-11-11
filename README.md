@@ -178,10 +178,17 @@ On 2026-11-10 these checks passed locally on the Power BI-saved files
 tests in `tests/test_powerbi_project_validation.py` passed. That is local
 static evidence; it does not claim a GitHub Actions run.
 
-CI runs only the unit/integration tests, `validate_powerbi_project.py`, the
-pipeline bootstrap, the governed DAG, and `dbt build`. The `py_compile` and
-`git diff --check` checks above are manual/local and are not part of the
-GitHub Actions workflow.
+CI runs the unit/integration tests, `validate_powerbi_project.py`, the pipeline
+bootstrap, a deterministic fixture ingestion
+(`tests/fixtures/mini_retail.xlsx`) that exercises the data-backed SQL gates,
+the governed DAG, and `dbt build`. The `py_compile` and `git diff --check`
+checks above are manual/local and are not part of the GitHub Actions workflow.
+
+The fixture is synthetic and small (165 rows). It covers `SALE`,
+`CANCELLATION`, `ADJUSTMENT` (both zero- and non-zero-price), and a missing
+Customer ID, so `018` fact/staging equality, the `022` adjustment contract, and
+`reconciliation_data_quality` run against real rows instead of empty tables. It
+does not replace a full-snapshot ingestion.
 
 The CI DAG command does not pass `--train-model`. It installs the model
 dependencies and verifies schema-related contracts through its other checks,
@@ -190,11 +197,6 @@ train a model and persist rows to `mart.repurchase_model_evaluation` or
 `bi.repurchase_model_evaluation`. Model training remains an opt-in local DAG
 task; the dated local evidence above and the decision report are the relevant
 runtime evidence for that path.
-
-CI also runs against an empty disposable database. Gates that depend on a
-published snapshot — the `022` adjustment baseline, `018` fact/staging
-equality, and `reconciliation_data_quality` — therefore pass trivially in CI
-and are only exercised by a local snapshot run.
 
 ## Interpretation guardrails
 

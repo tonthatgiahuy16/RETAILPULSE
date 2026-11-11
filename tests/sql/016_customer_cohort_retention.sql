@@ -82,6 +82,10 @@ begin
             min(active_customer_count) as active_customer_count_min,
             max(active_customer_count) as active_customer_count_max
         from mart.customer_cohort_retention
+        -- Migration 017 deliberately emits dense zero-activity months.  This
+        -- reconciliation compares only months that have published customer
+        -- purchase events; gate 017 checks the retained zero rows separately.
+        where active_customer_count > 0
         group by source_file_id, activity_month
     )
     select count(*) into failures

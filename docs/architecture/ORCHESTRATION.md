@@ -34,7 +34,7 @@ $env:PYTHONPATH = 'src'
 python scripts/run_dag.py `
   --workbook data/raw/online_retail_ii/online_retail_II.xlsx `
   --source-uri 'https://archive.ics.uci.edu/dataset/502/online+retail+ii' `
-  --source-retrieved-at '2026-11-10T10:00:00+07:00'
+  --source-retrieved-at '<actual-retrieval-time-with-timezone>'
 ```
 
 Optional tasks:
