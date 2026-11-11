@@ -1,8 +1,9 @@
 # Repurchase model evaluation — Slice 15
 
 `scripts/train_repurchase_model.py` trains a fixed Logistic Regression model
-from published customer events. It does not write a score to PostgreSQL or
-change `decision` relations.
+from published customer events. It does not write propensity scores or change
+`decision` relations. A normal run persists aggregate evaluation metrics;
+`--report-only` omits that database write.
 
 ## Temporal contract
 
@@ -29,14 +30,34 @@ python scripts/train_repurchase_model.py
 The default report is `data/processed/repurchase_model_evaluation.json`, an
 ignored local file. Use `--source-file-id` when multiple snapshots exist.
 
-## Metrics and limits
+## Metrics, fixed-capacity ranking and limits
 
-The report compares Logistic Regression with the existing
-`observation_frequency >= 2` rule using PR-AUC, ROC-AUC, precision/recall at
-0.5, and lift at the top 20% of ranked customers. The model also reports Brier
-score and five calibration bins. Lift is the positive rate of the top 20%
-divided by the overall positive rate; Customer ID deterministically breaks
-equal-score ties.
+The report retains Logistic Regression versus the binary
+`observation_frequency >= 2` metrics using PR-AUC, ROC-AUC, precision/recall at
+0.5, and lift at the top 20%. It also compares fixed-capacity precision@K,
+recall@K and lift@K at 10%, 20% and 30% for:
+
+- contract-019 RFM priority, ranked by its published `priority_rank`;
+- naive frequency, ordered `frequency DESC, customer_id ASC`;
+- business frequency, ordered `frequency DESC, monetary DESC, recency ASC,
+  customer_id ASC`;
+- Logistic Regression probabilities.
+
+All methods use the same source snapshot and holdout customer set. K is
+`ceil(holdout_count * fraction)`. The report shows the tie block at each cutoff
+and how many positions K needs from it. A frequency cut can therefore show
+when customer ID decides membership. The model reports Brier score and five
+calibration bins. A log1p transform of frequency and monetary is run as a
+feature-skew sensitivity check; it is not selected automatically.
+
+The written decision report is `docs/decision/RETENTION_PRIORITY_DECISION.md`.
+Run with `--report-only` to generate the JSON and Markdown report from PostgreSQL
+without upserting evaluation metrics. Model configuration records
+`class_weight=None` explicitly.
+
+Cost or incremental-revenue scenarios are outside the measured backtest. If
+added later, each must be labeled **simulation based on assumptions**, not
+actual ROI.
 
 This is a historical backtest, not campaign response, causal uplift, revenue,
 profit, or ROI. Model scoring/publishing is intentionally a later slice.

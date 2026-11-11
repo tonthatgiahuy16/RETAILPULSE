@@ -23,6 +23,10 @@ retailer, accounting revenue, campaign results, or causal uplift.
   truth for transformation logic. See [`dbt/README.md`](dbt/README.md).
 - A read-only PostgreSQL `bi` semantic layer and a Power BI Project (PBIP)
   report with Overview, Customer lifecycle, and Data quality pages.
+- A temporal holdout decision report comparing RFM, frequency ranking, and
+  Logistic Regression at fixed contact capacities, including calibration and
+  frequency tie-break diagnostics. See
+  [`docs/decision/RETENTION_PRIORITY_DECISION.md`](docs/decision/RETENTION_PRIORITY_DECISION.md).
 - Architecture, data-contract, KPI, and source-attribution documentation under
   [`docs/`](docs/).
 

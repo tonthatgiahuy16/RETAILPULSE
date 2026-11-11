@@ -27,8 +27,8 @@ In scope:
 - Revenue, cancellation diagnostics, customer purchase events, RFM, cohort
   retention, and a temporally bounded repurchase-label baseline.
 - A read-only analytics dashboard and portfolio documentation.
-- A future customer-priority decision table based on explicitly documented
-  assumptions.
+- Rule-based customer-priority contracts and a fixed-capacity temporal
+  comparison of RFM, frequency rules, and Logistic Regression.
 
 Out of scope:
 
@@ -69,8 +69,8 @@ run in another environment.
 | dbt | Adapter views and contract tests over PostgreSQL staging and mart relations | Implemented |
 | Customer analytics | Candidate-only cancellation diagnostics, customer purchase events, RFM, repurchase label baseline, and cohort retention | Implemented |
 | Dashboard and BI consumption | PostgreSQL `bi` semantic layer and local Power BI Project (PBIP) report | Semantic layer implemented; report manually opened and its three pages confirmed to show data in Power BI Desktop on 2026-11-07; Service publication, gateway, and scheduled refresh are not verified |
-| Dimensional warehouse | Snapshot-scoped customer, product, and date dimensions plus a lineage-preserving sales-line fact | Implemented in code; runtime evidence pending |
-| Decision and ML | Rule-based RFM priority contract plus temporal Logistic Regression evaluation; score publication and production scoring remain planned | Model evaluation implemented in code; runtime evidence pending; metrics persisted to bi.repurchase_model_evaluation |
+| Dimensional warehouse | Snapshot-scoped customer, product, and date dimensions plus a lineage-preserving sales-line fact | Local DAG run on 2026-11-10 refreshed warehouse materialized views and ran SQL gates against the existing source snapshot; this is not evidence of new-snapshot ingestion or an SLA |
+| Decision and ML | Rule-based RFM priority contract, fixed-capacity comparison, and temporal Logistic Regression evaluation | [Local decision report](../decision/RETENTION_PRIORITY_DECISION.md) generated 2026-11-11 for source snapshot 1 (SHA-256 `bcbe73b35f5b7babf197fb0cb983a11f5d9ff929078d4aa53d171b1f2df2e980`); business frequency rule is recommended on the one tested holdout; propensity-score publication and production scoring remain planned |
 | Orchestration | In-repo DAG runner with dependency order, retries, downstream skipping, JSON run records, and an optional failure webhook; Airflow DAG and backfill operations | Runner implemented and tested; Airflow planned |
 
 The detailed and authoritative implementation contracts live in
@@ -110,8 +110,9 @@ Priority KPI families are:
   and the share without Customer ID.
 - Customer lifecycle: eligible customer purchase events, RFM components,
   repeat-purchase behaviour, and cohort retention.
-- Future model evaluation: temporal baseline comparison, PR-AUC,
-  precision/recall at a documented threshold, lift, and calibration.
+- Decision evaluation: temporal baselines, precision@K, recall@K, lift@K,
+  threshold metrics, and calibration; fixed-capacity results must use one
+  holdout cohort and disclose tie-breaking.
 
 `net_transaction_amount` must not be relabelled as accounting net revenue.
 
@@ -149,15 +150,13 @@ declared release scope:
 
 ## Roadmap
 
-1. Consolidate the current verified contracts into a KPI dictionary and data
-   model diagram.
-2. Add only the dimensional facts/dimensions required by the next consumer;
-   do not duplicate existing contracts without a reason.
-3. Build product/country analytical marts and a decision-table contract.
-4. Train and evaluate one temporal repurchase model only after the feature and
-   label contracts are stable.
-5. Add Airflow only after the manual pipeline, model scoring, and validation
-   commands are independently repeatable.
+1. Repeat the fixed-capacity comparison across additional temporal holdouts or
+   an independently verified source snapshot; check decision stability and
+   calibration before considering score publication.
+2. Add product/country marts only when a defined consumer needs contracts
+   beyond the existing `bi.sales_line` relation.
+3. Keep Airflow deferred until the manual pipeline and its validation commands
+   are independently repeatable; production scoring remains a separate scope.
 
 ## Related documents
 
@@ -167,3 +166,4 @@ declared release scope:
 - [Customer purchase events](../architecture/CUSTOMER_PURCHASE_EVENT.md)
 - [Repurchase label dataset](../architecture/REPURCHASE_LABEL_DATASET.md)
 - [Customer cohort retention](../architecture/CUSTOMER_COHORT_RETENTION.md)
+- [Retention-priority decision report](../decision/RETENTION_PRIORITY_DECISION.md)
