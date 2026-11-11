@@ -247,6 +247,7 @@ def validate_report(report_dir: Path) -> list[str]:
             visual = json.loads(visual_path.read_text(encoding="utf-8"))
             if visual.get("visual", {}).get("visualType") == "slicer":
                 slicers.append(visual_path.parent.name)
+        slicers.sort()
         if slicers != ["source_snapshot_slicer"]:
             fail(errors, f"{page}: only the source snapshot slicer is allowed, found {slicers}")
     priority_table = (

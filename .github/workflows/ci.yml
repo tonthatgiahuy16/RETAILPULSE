@@ -43,7 +43,11 @@ jobs:
       - name: Validate Power BI project metadata
         run: python scripts/validate_powerbi_project.py
       - name: Build and validate portfolio dashboard brief
-        run: python scripts/build_dashboard.py
+        run: >-
+          python scripts/build_dashboard.py
+          --eval-json tests/fixtures/dashboard_repurchase_model_evaluation.json
+          --run-json tests/fixtures/dashboard_pipeline_run.json
+          --output .test-tmp/ci-dashboard/index.html
       - name: Bootstrap a clean database with the operational runner
         run: python scripts/run_pipeline.py
       - name: Ingest temporal fixture and run data-backed SQL gates
