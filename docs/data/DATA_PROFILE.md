@@ -24,7 +24,7 @@ Headers are exactly: `Invoice`, `StockCode`, `Description`, `Quantity`, `Invoice
 | Missing `Customer ID` | 107,927 | Retain for revenue; exclude later customer-level consumers |
 | Missing `Description` | 2,928 | Flag in staging; do not mutate raw |
 | Invoice beginning `C` | 10,206 | UCI-defined cancellation indicator, not yet a matched return |
-| Negative `Quantity` | 12,326 | Not synonymous with cancellation; preserve and classify later |
+| Negative `Quantity` | 12,326 | Not synonymous with cancellation; C-prefixed rows are `CANCELLATION`, other negative rows are `ADJUSTMENT` |
 | `Price <= 0` | 3,690 | Quarantine/flag candidate, pending business rule |
 | Missing or non-datetime `InvoiceDate` | 0 | No timestamp parsing failure in this sheet |
 | Timestamp span | 2009-12-01 07:45 to 2010-12-09 20:01 | No timezone is supplied by UCI |
@@ -39,7 +39,7 @@ Profiled locally on 2026-10-29 against the hash-recorded workbook.
 | Missing `Customer ID` | 135,080 | Retain for revenue; exclude later customer-level consumers |
 | Missing `Description` | 1,454 | Flag in staging; do not mutate raw |
 | Invoice beginning `C` | 9,288 | UCI-defined cancellation indicator, not yet a matched return |
-| Negative `Quantity` | 10,624 | Not synonymous with cancellation; preserve and classify later |
+| Negative `Quantity` | 10,624 | Not synonymous with cancellation; C-prefixed rows are `CANCELLATION`, other negative rows are `ADJUSTMENT` |
 | `Price <= 0` | 2,517 | Quarantine/flag candidate, pending business rule |
 | Missing or non-datetime `InvoiceDate` | 0 | No timestamp parsing failure in this sheet |
 | Timestamp span | 2010-12-01 08:26 to 2011-12-09 12:50 | No timezone is supplied by UCI |

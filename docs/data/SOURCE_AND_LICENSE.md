@@ -19,9 +19,16 @@ The repository must retain the citation and license attribution in user-facing d
 - Workbook size: 45,622,278 bytes
 - Source snapshot is stored only under ignored `data/raw/`.
 
-## Not yet verified against the complete workbook
+## Verification status against the complete workbook
 
-- Parsed data types and timestamp representation
-- Exact-workbook duplicate policy and duplicate counts
+Profiled locally on 2026-10-29 against the hash-recorded workbook, covering both
+sheets (`1,067,371` data rows). See [`DATA_PROFILE.md`](DATA_PROFILE.md) for the
+counts.
 
-See [`DATA_PROFILE.md`](DATA_PROFILE.md) for the inspected sheet structure and first completed profile.
+- Parsed data types and timestamp representation: **verified** for both sheets;
+  `InvoiceDate` had zero missing or unparseable values, and timestamps carry no
+  timezone (UCI does not supply one).
+- Duplicate policy: **verified** — raw ingestion retains every physical workbook
+  row, and `InvoiceNo` is a business attribute, not a raw-row key.
+- Exact-workbook duplicate counts: **not yet measured**. The profile script does
+  not deduplicate or count duplicate rows, so no duplicate-count claim is made.

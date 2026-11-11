@@ -4,7 +4,8 @@ models:
   - name: stg_online_retail_transaction
     description: >-
       One row per published raw source row. Missing Customer ID remains eligible
-      for revenue; cancellation invoices are NOT_EVALUATED, never auto-matched returns.
+      for revenue; negative non-C rows are operational adjustments; cancellation
+      invoices are NOT_EVALUATED, never auto-matched returns.
     tests:
       - unique_combination_of_columns:
           arguments:
@@ -21,7 +22,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: [SALE, CANCELLATION, QUARANTINE]
+                values: [SALE, CANCELLATION, ADJUSTMENT, QUARANTINE]
       - name: cancellation_match_status
         tests:
           - not_null

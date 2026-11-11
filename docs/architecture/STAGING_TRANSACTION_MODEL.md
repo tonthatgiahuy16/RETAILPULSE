@@ -26,9 +26,10 @@ Classification is exhaustive and mutually exclusive for every published raw row:
 |---|---|
 | `QUARANTINE` | `Invoice`, `Quantity`, `InvoiceDate`, or `Price` is blank or cannot be parsed into the required staging type. `quarantine_reason` records every failing required field. |
 | `CANCELLATION` | Required values parse successfully and normalised `Invoice` begins with `C`, case-insensitively. |
-| `SALE` | Required values parse successfully and the invoice does not begin with `C`. |
+| `ADJUSTMENT` | Required values parse successfully, the invoice does not begin with `C`, and `Quantity < 0`. This is an operational adjustment, not a confirmed return. |
+| `SALE` | Required values parse successfully, the invoice does not begin with `C`, and `Quantity >= 0`. |
 
-The following are flags, not reclassification rules: missing `Description`, negative `Quantity`, and non-positive `Price`. The completed profile records these as conditions requiring later business decisions; this slice does not discard them or claim that a negative quantity is a cancellation.
+Missing `Description` and non-positive `Price` remain flags, not reclassification rules. The non-`C` negative-quantity decision and snapshot-scoped evidence are recorded in [Revenue adjustment contract](../data/REVENUE_ADJUSTMENT_CONTRACT.md). No row is discarded and this classification does not claim a return match.
 
 Missing `Customer ID` is also a flag (`is_missing_customer_id`), not a quarantine condition. Such rows retain typed quantity, timestamp, and price for later revenue consumers, while a future customer-level model may explicitly exclude them.
 
