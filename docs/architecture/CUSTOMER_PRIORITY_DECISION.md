@@ -62,14 +62,22 @@ local run are:
 | Frequency business (`frequency DESC, monetary DESC, recency ASC, customer_id ASC`) | 95.0% / 15.4% | 91.0% / 29.4% | 86.1% / 41.8% |
 | Logistic Regression | 95.0% / 15.4% | 90.5% / 29.3% | 85.5% / 41.5% |
 
-For this holdout, the recommendation is the business frequency rule. It ties LR
-at 10% and has higher precision by 0.539 percentage points at 20% and 0.598
-points at 30%, with a simpler ranking rule. Frequency naive relies on ID to
-select 61 of 72, 156 of 209, and 226 of 312 customers in the boundary-frequency
-groups at the three capacities; the business tie-breakers avoid cutting through
-a tied group at these cutoffs. These results are historical ranking evidence
-from one source snapshot, not evidence of a campaign effect or stable
-performance across periods.
+Business frequency is the simpler operational candidate for this holdout. It
+ties LR at 10% and has observed precision differences of +0.539 percentage
+points at 20% and +0.598 points at 30%. Paired-customer bootstrap 95%
+confidence intervals for those differences include zero at every capacity:
+10% `[-0.151, +0.151]` pp, 20% `[-1.015, +2.000]` pp, and 30%
+`[-0.578, +1.784]` pp. The report therefore does not claim it beats LR;
+selection of the rule rests on its simpler explanation. Frequency naive relies
+on ID to select 61 of 72, 156 of 209, and 226 of 312 customers in the
+boundary-frequency groups at the three capacities; the business tie-breakers
+avoid cutting through a tied group at these cutoffs.
+
+The six rolling cutoffs reuse customers: the 15 pairwise Jaccard similarities
+range from 0.355 to 0.772. Those cutoffs support a temporal-stability review,
+but their customer rows are not independent samples and an unadjusted average
+does not establish stable performance. These results remain historical ranking
+evidence from one source snapshot, not evidence of a campaign effect.
 
 The model used `class_weight=None`. Pooled training-example positive rate was
 46.9%, versus 61.9% on holdout; LR mean predicted probability was 46.7%.

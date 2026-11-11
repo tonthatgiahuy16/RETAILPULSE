@@ -50,6 +50,21 @@ when customer ID decides membership. The model reports Brier score and five
 calibration bins. A log1p transform of frequency and monetary is run as a
 feature-skew sensitivity check; it is not selected automatically.
 
+For business-frequency versus Logistic Regression, the report also emits a
+paired customer bootstrap 95% percentile confidence interval for the
+Precision@K difference at every tested capacity. It resamples holdout customers
+with rankings and original K membership fixed, using a recorded seed and 2,000
+replicates. This interval measures observed-label precision uncertainty for
+the declared holdout; it does not measure refit-model uncertainty or predict a
+future time period. If an interval includes zero, the report must not claim
+that the rule beats the model at that capacity.
+
+The report also records pairwise customer overlap across all rolling prediction
+cutoffs. Repeated customers make cutoff rows dependent, so a mean across
+cutoffs is not an independent-sample confidence interval. Use these cutoffs to
+inspect temporal stability; use an independent source snapshot or a
+pre-specified blocked evaluation before making an operational claim.
+
 The written decision report is `docs/decision/RETENTION_PRIORITY_DECISION.md`.
 Run with `--report-only` to generate the JSON and Markdown report from PostgreSQL
 without upserting evaluation metrics. Model configuration records
