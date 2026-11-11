@@ -1,6 +1,6 @@
 # Retention priority decision report
 
-- Generated at: `2026-11-11T11:55:55.489884+00:00`; source snapshot: `1` (SHA-256 `bcbe73b35f5b7babf197fb0cb983a11f5d9ff929078d4aa53d171b1f2df2e980`).
+- Generated at: `2026-11-11T16:04:25.599769+00:00`; source snapshot: `1` (SHA-256 `bcbe73b35f5b7babf197fb0cb983a11f5d9ff929078d4aa53d171b1f2df2e980`).
 - Holdout window: `2011-09-11` to `2011-12-10` (end exclusive).
 - Holdout: 2,784 customers, positive rate 61.9%; training positive rate 46.9%.
 - Decision: **frequency_business**. frequency_business has the highest mean precision@K among the simple rules. at K=10%, it matches LR; at K=20%, it leads LR by 0.539 percentage points; at K=30%, it leads LR by 0.598 percentage points. The paired bootstrap confidence interval includes zero for at least one K, so this one holdout does not establish a precision difference from LR. Use the rule for its simpler explanation, not because it is proven superior.

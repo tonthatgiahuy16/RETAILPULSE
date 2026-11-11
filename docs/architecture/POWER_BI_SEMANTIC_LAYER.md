@@ -27,15 +27,29 @@ or write model propensity scores to PostgreSQL.
 | `bi.repurchase_model_evaluation` | Source snapshot × model name | `mart.repurchase_model_evaluation` | Logistic regression vs rule baseline backtest. |
 
 The SQL gate `tests/sql/020_powerbi_semantic_layer.sql` reconciles all eight
-Power BI views to their published source contracts:
-- `bi.source_snapshot` matches successfully ingested `ops.source_file` records;
-- `bi.sales_daily` reconciles with `mart.revenue_daily`;
-- `bi.sales_line` matches `dw.fct_sales_line` row counts and lineage;
-- `bi.customer_lifecycle_snapshot` matches `decision.customer_priority_snapshot`;
-- `bi.customer_cohort_retention` matches `mart.customer_cohort_retention`;
-- `bi.cancellation_diagnostic` asserts candidate diagnostic categories and interpretation labels;
+Power BI views to their published source contracts with symmetric column-level
+comparisons (both `EXCEPT` directions):
+- `bi.source_snapshot` matches successfully ingested `ops.source_file` records
+  across all seven columns;
+- `bi.sales_daily` reconciles with `mart.revenue_daily` and re-derives
+  `missing_customer_id_share`;
+- `bi.sales_line` matches `dw.fct_sales_line` per `(source_file_id, sheet_name)`
+  on row count, quantity sum, sales-amount sum, and missing-customer rows, and
+  has no duplicate source rows;
+- `bi.customer_lifecycle_snapshot` matches `decision.customer_priority_snapshot`
+  on all shared columns (the BI-only `model_interpretation` label is checked
+  separately), with no duplicate customer grain;
+- `bi.customer_cohort_retention` matches `mart.customer_cohort_retention` on
+  all shared columns and keeps month-0 retention at 1;
+- `bi.cancellation_diagnostic` matches row counts from
+  `int.cancellation_match_resolution` grouped by source snapshot, candidate
+  status, and candidate reason, and asserts the interpretation labels;
 - `bi.repurchase_baseline_evaluation` reconciles with `mart.customer_repurchase_baseline_evaluation`;
 - `bi.repurchase_model_evaluation` reconciles with `mart.repurchase_model_evaluation` and asserts the backtest interpretation disclaimer.
+
+The `bi.sales_daily` and `bi.cancellation_diagnostic` checks re-derive their
+contract from `stg`/raw lineage, so on the full snapshot the gate takes minutes
+rather than seconds; the CI fixture run stays fast.
 
 ## Interpretation rules carried into reports
 

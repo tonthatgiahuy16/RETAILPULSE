@@ -1,8 +1,9 @@
 # dbt adapters — role and boundary
 
 dbt in this repository is a **verification and lineage layer**, not the
-transformation engine. PostgreSQL migrations `002`–`004` own transaction
-classification and revenue arithmetic. The dbt models are view adapters over
+transformation engine. PostgreSQL migrations `002` and `022` own transaction
+classification, migration `003` owns revenue arithmetic, and migrations
+`004`, `006`, and `023` own reconciliation. The dbt models are view adapters over
 those published contracts, created in `analytics_staging` and
 `analytics_marts` by the example profile.
 
