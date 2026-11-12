@@ -67,6 +67,36 @@ cutoffs is not an independent-sample confidence interval. Use these cutoffs to
 inspect temporal stability; use an independent source snapshot or a
 pre-specified blocked evaluation before making an operational claim.
 
+## Multi-holdout stability comparison
+
+The published final holdout remains the single decision cohort, but it is not
+the only evaluation point. The report also evaluates every second 90-day cutoff
+backwards from that final holdout, with up to three earlier cutoffs per training
+window. On the current snapshot this yields:
+
+- B1: train `2010-06-18`, holdout `2010-09-16` to `2010-12-15`;
+- B2: train `2010-06-18` to `2010-12-15`, holdout `2011-03-15` to `2011-06-13`;
+- B3: train `2010-12-15` to `2011-06-13`, holdout `2011-09-11` to `2011-12-10`.
+
+For every block the report recomputes feature and label windows from cutoffs at
+or before that block's holdout start. Contract-019 RFM thresholds are also
+recomputed inside the block's holdout cohort instead of reusing percentiles
+fitted on the final snapshot. A block is rejected if any training label window
+reaches past the holdout start. Each block reports Precision@K, Recall@K and
+Lift@K at 10%, 20% and 30% for RFM priority 019, business frequency and Logistic
+Regression, plus its own paired bootstrap for business frequency versus
+Logistic Regression.
+
+Bootstrap intervals are never pooled across blocks. Customers repeat across
+cutoffs, so blocks are dependent samples: cross-block mean, minimum, maximum and
+range are descriptive stability summaries, not confidence intervals. A model is
+not declared a winner from one block, from a small mean difference, or from a
+range that crosses zero.
+
+Generated output is deterministic with the recorded seed; only
+`generated_at_utc` changes between runs. The report records the run timestamp
+and the source snapshot SHA-256.
+
 The written decision report is `docs/decision/RETENTION_PRIORITY_DECISION.md`.
 Run with `--report-only` to generate the JSON and Markdown report from PostgreSQL
 without upserting evaluation metrics. Model configuration records
@@ -113,3 +143,22 @@ baseline scored PR-AUC `0.7789`, ROC-AUC `0.7020`, and lift@20% `1.4513`.
 At threshold 0.5, the model's precision was `85.0%` and recall `42.9%`, while
 the frequency baseline was `75.3%` precision and `67.1%` recall. This is a
 threshold trade-off, not proof that one campaign policy is economically better.
+
+On 2026-11-12, a deterministic rerun on the same snapshot produced three
+multi-holdout blocks: B1 holdout `2010-09-16` to `2010-12-15` (2,831 customers,
+61.3% positive), B2 holdout `2011-03-15` to `2011-06-13` (3,341 customers, 43.2%
+positive), and B3 holdout `2011-09-11` to `2011-12-10` (2,784 customers, 61.9%
+positive). At K=20%, precision was:
+
+| Block | RFM priority 019 | Frequency business | Logistic Regression |
+|---|---:|---:|---:|
+| B1 (Q4 2010) | 0.818 | 0.873 | 0.866 |
+| B2 (Q2 2011) | 0.756 | 0.803 | 0.807 |
+| B3 (Q4 2011) | 0.865 | 0.910 | 0.905 |
+
+Business frequency led Logistic Regression in B1 (`+0.705` pp) and B3 (`+0.539`
+pp) but trailed in B2 (`-0.448` pp). Every per-block bootstrap interval at every
+tested capacity included zero. The observed ordering therefore changes with the
+evaluation period; the report does not claim a stable precision advantage for
+either method. Blocks share 38-44% Jaccard customer overlap, so the cross-block
+mean is descriptive only.

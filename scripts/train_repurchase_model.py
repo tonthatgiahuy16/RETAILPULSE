@@ -6,7 +6,7 @@ import argparse
 import json
 import math
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -21,8 +21,11 @@ from retailpulse.modeling.repurchase import (
     OBSERVATION_DAYS,
     RepurchaseExample,
     assert_published_holdout_matches,
+    priority_backtest_rows,
     rolling_prediction_starts,
+    split_for_training_cutoffs,
     split_temporally,
+    training_cutoffs_for_block,
 )
 from retailpulse.pipeline_runner import connect_from_dsn
 
@@ -162,12 +165,12 @@ def _fit_logistic(train: tuple[RepurchaseExample, ...], holdout: tuple[Repurchas
     return [float(value) for value in model.predict_proba(_score_features(holdout, log1p_skewed_features))[:, 1]]
 
 
-def _decision_comparison(
+def _ranking_methods(
     holdout: tuple[RepurchaseExample, ...],
     priority_rows: list[dict[str, Any]],
     probabilities: list[float],
-    log_probabilities: list[float],
-) -> dict[str, Any]:
+    log_probabilities: list[float] | None = None,
+) -> tuple[dict[str, tuple[list[dict[str, Any]], Any, Any, str]], list[dict[str, Any]], dict[str, float]]:
     labels = {row.customer_id: row.repurchased_in_prediction_window for row in holdout}
     holdout_ids = set(labels)
     if {row["customer_id"] for row in priority_rows} != holdout_ids:
@@ -175,7 +178,6 @@ def _decision_comparison(
     if any(labels[row["customer_id"]] != row["label"] for row in priority_rows):
         raise ValueError("RFM priority backtest labels do not match the published holdout")
 
-    features_by_id = {row.customer_id: row for row in holdout}
     base_rows = [
         {
             "customer_id": row.customer_id,
@@ -187,7 +189,6 @@ def _decision_comparison(
         for row in holdout
     ]
     probability_by_id = {row.customer_id: score for row, score in zip(holdout, probabilities, strict=True)}
-    log_probability_by_id = {row.customer_id: score for row, score in zip(holdout, log_probabilities, strict=True)}
     methods = {
         "rfm_priority_019": (
             priority_rows,
@@ -213,13 +214,30 @@ def _decision_comparison(
             lambda row: row["score"],
             "Standardized raw recency, frequency and monetary features; class_weight=None.",
         ),
-        "log1p_logistic_regression_sensitivity": (
+    }
+    if log_probabilities is not None:
+        log_probability_by_id = {
+            row.customer_id: score
+            for row, score in zip(holdout, log_probabilities, strict=True)
+        }
+        methods["log1p_logistic_regression_sensitivity"] = (
             [dict(row, score=log_probability_by_id[row["customer_id"]]) for row in base_rows],
             lambda row: (-row["score"], row["customer_id"]),
             lambda row: row["score"],
             "Sensitivity only: log1p frequency and monetary; class_weight=None.",
-        ),
-    }
+        )
+    return methods, base_rows, probability_by_id
+
+
+def _decision_comparison(
+    holdout: tuple[RepurchaseExample, ...],
+    priority_rows: list[dict[str, Any]],
+    probabilities: list[float],
+    log_probabilities: list[float],
+) -> dict[str, Any]:
+    methods, base_rows, probability_by_id = _ranking_methods(
+        holdout, priority_rows, probabilities, log_probabilities
+    )
     output = {}
     for name, (rows, rank_key, tie_key, definition) in methods.items():
         output[name] = {
@@ -282,6 +300,201 @@ def _decision_comparison(
         ),
     }
     return output
+
+
+MULTI_HOLDOUT_METHODS = (
+    "rfm_priority_019",
+    "frequency_business",
+    "logistic_regression",
+)
+MULTI_HOLDOUT_STRIDE = 2
+MULTI_HOLDOUT_TRAIN_CUTOFFS = 3
+
+
+def _multi_holdout_comparison(
+    all_examples: tuple[RepurchaseExample, ...], starts: tuple[date, ...]
+) -> dict[str, Any]:
+    """Evaluate the same methods on several non-overlapping holdout blocks.
+
+    The published final holdout is always included. Earlier blocks are selected
+    every second cutoff backwards from that endpoint, which alternates the
+    seasonal position of the test window instead of evaluating only Q4.
+    """
+
+    holdout_starts = tuple(sorted(starts[-1::-MULTI_HOLDOUT_STRIDE]))
+    blocks: list[dict[str, Any]] = []
+    for holdout_start in holdout_starts:
+        training_cutoffs = training_cutoffs_for_block(
+            starts, holdout_start, MULTI_HOLDOUT_TRAIN_CUTOFFS
+        )
+        block_examples = tuple(
+            example
+            for example in all_examples
+            if example.prediction_start_date <= holdout_start
+        )
+        train, holdout = split_for_training_cutoffs(
+            block_examples, holdout_start, training_cutoffs
+        )
+        probabilities = _fit_logistic(train, holdout)
+        priority_rows = priority_backtest_rows(holdout)
+        methods, base_rows, probability_by_id = _ranking_methods(
+            holdout, priority_rows, probabilities
+        )
+        block_methods = {
+            name: {
+                "definition": methods[name][3],
+                "metrics": evaluate_ranking(
+                    methods[name][0],
+                    rank_key=methods[name][1],
+                    tie_key=methods[name][2],
+                    fractions=DECISION_FRACTIONS,
+                ),
+            }
+            for name in MULTI_HOLDOUT_METHODS
+        }
+        bootstrap = bootstrap_precision_comparison(
+            base_rows,
+            left_rank_key=methods["frequency_business"][1],
+            right_rank_key=lambda row: (-probability_by_id[row["customer_id"]], row["customer_id"]),
+            fractions=DECISION_FRACTIONS,
+            iterations=BOOTSTRAP_ITERATIONS,
+            seed=BOOTSTRAP_SEED,
+        )
+        train_labels = [int(row.repurchased_in_prediction_window) for row in train]
+        holdout_labels = [int(row.repurchased_in_prediction_window) for row in holdout]
+        blocks.append(
+            {
+                "holdout_prediction_start_date": holdout_start.isoformat(),
+                "holdout_prediction_end_date": (
+                    holdout_start + timedelta(days=PREDICTION_DAYS)
+                ).isoformat(),
+                "train_prediction_start_dates": [
+                    cutoff.isoformat() for cutoff in training_cutoffs
+                ],
+                "train_example_count": len(train),
+                "train_positive_rate": sum(train_labels) / len(train_labels),
+                "holdout_customer_count": len(holdout),
+                "holdout_positive_count": sum(holdout_labels),
+                "holdout_positive_rate": sum(holdout_labels) / len(holdout_labels),
+                "methods": block_methods,
+                "bootstrap_frequency_business_vs_logistic_regression": bootstrap,
+            }
+        )
+
+    overlap = cutoff_overlap_diagnostics(
+        {
+            block["holdout_prediction_start_date"]: {
+                row.customer_id
+                for row in all_examples
+                if row.prediction_start_date.isoformat()
+                == block["holdout_prediction_start_date"]
+            }
+            for block in blocks
+        }
+    )
+    summary_methods: dict[str, dict[str, dict[str, float]]] = {}
+    for method in MULTI_HOLDOUT_METHODS:
+        summary_methods[method] = {}
+        for metric_name in ("precision_at_k", "recall_at_k", "lift_at_k"):
+            by_fraction: dict[str, dict[str, float]] = {}
+            for index, fraction in enumerate(DECISION_FRACTIONS):
+                values = [
+                    block["methods"][method]["metrics"][index][metric_name]
+                    for block in blocks
+                ]
+                by_fraction[f"{fraction:.2f}"] = {
+                    "mean": sum(values) / len(values),
+                    "min": min(values),
+                    "max": max(values),
+                    "range": max(values) - min(values),
+                }
+            summary_methods[method][metric_name] = by_fraction
+
+    delta_summary: dict[str, dict[str, Any]] = {}
+    for index, fraction in enumerate(DECISION_FRACTIONS):
+        per_block = {
+            block["holdout_prediction_start_date"]: (
+                block["methods"]["frequency_business"]["metrics"][index]["precision_at_k"]
+                - block["methods"]["logistic_regression"]["metrics"][index]["precision_at_k"]
+            )
+            for block in blocks
+        }
+        values = list(per_block.values())
+        delta_summary[f"{fraction:.2f}"] = {
+            "per_block": per_block,
+            "mean": sum(values) / len(values),
+            "min": min(values),
+            "max": max(values),
+            "range": max(values) - min(values),
+        }
+
+    all_positive = all(
+        value > 0
+        for item in delta_summary.values()
+        for value in item["per_block"].values()
+    )
+    all_negative = all(
+        value < 0
+        for item in delta_summary.values()
+        for value in item["per_block"].values()
+    )
+    bootstrap_intervals = [
+        interval
+        for block in blocks
+        for interval in block["bootstrap_frequency_business_vs_logistic_regression"]
+    ]
+    excludes_zero = sum(
+        1 for interval in bootstrap_intervals if not interval["ci_includes_zero"]
+    )
+    if all_positive:
+        direction = (
+            "Frequency business has a higher observed precision@K than Logistic "
+            "Regression in every block at every tested capacity."
+        )
+    elif all_negative:
+        direction = (
+            "Logistic Regression has a higher observed precision@K than frequency "
+            "business in every block at every tested capacity."
+        )
+    else:
+        direction = (
+            "The observed precision@K ordering changes across blocks; no method "
+            "has a consistent direction."
+        )
+    if excludes_zero == 0:
+        interval_note = (
+            "No per-block bootstrap interval excludes zero at any tested capacity."
+        )
+    else:
+        interval_note = (
+            f"{excludes_zero} of {len(bootstrap_intervals)} per-block bootstrap "
+            "intervals exclude zero at a tested capacity; interpret each block "
+            "separately rather than pooling them."
+        )
+    interpretation = (
+        f"{direction} {interval_note} The blocks share customers, so their mean is "
+        "a stability summary, not an independent-sample confidence interval, and "
+        "this remains a historical backtest rather than campaign uplift."
+    )
+    if len(blocks) < 2:
+        interpretation = (
+            "Only one usable temporal holdout block is available for this source, "
+            "so multi-holdout stability cannot be assessed. The block is a "
+            "historical backtest, not campaign uplift or causal effect."
+        )
+    return {
+        "block_selection": (
+            "Every second 90-day cutoff, selected backwards from the published "
+            "final holdout, with up to three earlier cutoffs per training window."
+        ),
+        "blocks": blocks,
+        "customer_overlap": overlap,
+        "summary": {
+            "methods": summary_methods,
+            "frequency_business_minus_logistic_regression": delta_summary,
+            "interpretation": interpretation,
+        },
+    }
 
 
 def _training_diagnostics(train: tuple[RepurchaseExample, ...], holdout: tuple[RepurchaseExample, ...]) -> dict[str, Any]:
@@ -372,6 +585,81 @@ def _write_markdown_report(report: dict[str, Any], path: Path) -> None:
             f"{pair['shared_customer_count']:,} | {pair['jaccard_similarity']:.3f} | "
             f"{pair['right_customers_seen_in_left']:.1%} |"
         )
+    multi = report["multi_holdout"]
+    if len(multi["blocks"]) < 2:
+        multi_intro = (
+            "This source exposes only one usable temporal holdout block, so this "
+            "section reports that block without a cross-block stability comparison."
+        )
+    else:
+        multi_intro = (
+            "The final holdout is not the only evaluation point. This section "
+            "selects every second 90-day cutoff backwards from the published "
+            "holdout, so the comparison covers different seasonal positions "
+            "instead of a single Q4 window. Each block trains only on up to three "
+            "earlier cutoffs; no label window reaches the block's holdout. Blocks "
+            "are reported separately and are not pooled into one bootstrap sample."
+        )
+    multi_block_rows = []
+    multi_precision_rows = []
+    multi_bootstrap_rows = []
+    for index, block in enumerate(multi["blocks"], start=1):
+        label = f"B{index}"
+        multi_block_rows.append(
+            f"| {label} | {block['holdout_prediction_start_date']} to "
+            f"{block['holdout_prediction_end_date']} | "
+            f"{', '.join(block['train_prediction_start_dates'])} | "
+            f"{block['train_example_count']:,} | {block['train_positive_rate']:.1%} | "
+            f"{block['holdout_customer_count']:,} | {block['holdout_positive_rate']:.1%} |"
+        )
+        for metric_index, fraction in enumerate(DECISION_FRACTIONS):
+            rfm = block["methods"]["rfm_priority_019"]["metrics"][metric_index]
+            frequency = block["methods"]["frequency_business"]["metrics"][metric_index]
+            regression = block["methods"]["logistic_regression"]["metrics"][metric_index]
+            multi_precision_rows.append(
+                f"| {label} | {fraction:.0%} | {rfm['precision_at_k']:.3f} | "
+                f"{frequency['precision_at_k']:.3f} | {regression['precision_at_k']:.3f} | "
+                f"{(frequency['precision_at_k'] - regression['precision_at_k']) * 100:+.3f} |"
+            )
+            interval = block["bootstrap_frequency_business_vs_logistic_regression"][metric_index]
+            multi_bootstrap_rows.append(
+                f"| {label} | {fraction:.0%} | {interval['observed_difference'] * 100:+.3f} | "
+                f"[{interval['ci_lower'] * 100:+.3f}, {interval['ci_upper'] * 100:+.3f}] | "
+                f"{'yes' if interval['ci_includes_zero'] else 'no'} |"
+            )
+    multi_summary_rows = []
+    for method, metrics in multi["summary"]["methods"].items():
+        for fraction, summary in metrics["precision_at_k"].items():
+            multi_summary_rows.append(
+                f"| {method} | {float(fraction):.0%} | {summary['mean']:.3f} | "
+                f"{summary['min']:.3f} | {summary['max']:.3f} | {summary['range']:.3f} |"
+            )
+    multi_recall_lift_rows = []
+    for method, metrics in multi["summary"]["methods"].items():
+        for fraction in metrics["recall_at_k"]:
+            recall = metrics["recall_at_k"][fraction]
+            lift = metrics["lift_at_k"][fraction]
+            multi_recall_lift_rows.append(
+                f"| {method} | {float(fraction):.0%} | {recall['mean']:.3f} | "
+                f"{recall['min']:.3f} | {recall['max']:.3f} | {lift['mean']:.3f} | "
+                f"{lift['min']:.3f} | {lift['max']:.3f} |"
+            )
+    multi_delta_rows = []
+    for fraction, summary in multi["summary"][
+        "frequency_business_minus_logistic_regression"
+    ].items():
+        multi_delta_rows.append(
+            f"| {float(fraction):.0%} | {summary['mean'] * 100:+.3f} | "
+            f"{summary['min'] * 100:+.3f} | {summary['max'] * 100:+.3f} | "
+            f"{summary['range'] * 100:.3f} |"
+        )
+    multi_overlap_rows = []
+    for pair in multi["customer_overlap"]["pairs"]:
+        multi_overlap_rows.append(
+            f"| {pair['left_prediction_start_date']} | {pair['right_prediction_start_date']} | "
+            f"{pair['shared_customer_count']:,} | {pair['jaccard_similarity']:.3f} | "
+            f"{pair['right_customers_seen_in_left']:.1%} |"
+        )
     lines = [
         "# Retention priority decision report",
         "",
@@ -379,6 +667,7 @@ def _write_markdown_report(report: dict[str, Any], path: Path) -> None:
         f"- Holdout window: `{report['temporal_contract']['holdout_prediction_start_date']}` to `{report['temporal_contract']['holdout_prediction_end_date']}` (end exclusive).",
         f"- Holdout: {diagnostics['holdout_customer_count']:,} customers, positive rate {diagnostics['holdout_positive_rate']:.1%}; training positive rate {diagnostics['train_positive_rate']:.1%}.",
         f"- Decision: **{comparison['recommendation']['method']}**. {comparison['recommendation']['reason']}",
+        f"- Multi-holdout: {multi['summary']['interpretation']}",
         "- This is a historical temporal backtest of observed repurchase, not campaign response or causal effect.",
         "",
         "## Fixed-capacity ranking comparison",
@@ -406,6 +695,52 @@ def _write_markdown_report(report: dict[str, Any], path: Path) -> None:
         "| Earlier cutoff | Later cutoff | Shared customers | Jaccard similarity | Later customers seen earlier |",
         "|---|---|---:|---:|---:|",
         *overlap_rows,
+        "",
+        "## Multi-holdout stability comparison",
+        "",
+        multi_intro,
+        "",
+        "| Block | Holdout window (end excl.) | Training cutoffs | Train examples | Train positive rate | Holdout customers | Holdout positive rate |",
+        "|---|---|---|---:|---:|---:|---:|",
+        *multi_block_rows,
+        "",
+        "### Precision@K by block",
+        "",
+        "| Block | K | RFM priority 019 | Frequency business | Logistic Regression | FB - LR (pp) |",
+        "|---|---:|---:|---:|---:|---:|",
+        *multi_precision_rows,
+        "",
+        "### Per-block bootstrap: frequency business vs Logistic Regression",
+        "",
+        "Each block gets its own paired customer bootstrap with the published seed and 2,000 replicates. Intervals are never combined across blocks; differences are percentage points of precision.",
+        "",
+        "| Block | K | FB - LR (pp) | 95% CI (pp) | Includes zero? |",
+        "|---|---:|---:|---:|:---:|",
+        *multi_bootstrap_rows,
+        "",
+        "### Stability summary across blocks",
+        "",
+        "Mean, minimum, maximum, and range are descriptive summaries of the block values. They are not an independent-sample confidence interval because customers recur across blocks.",
+        "",
+        "| Method | K | Mean precision | Min | Max | Range |",
+        "|---|---:|---:|---:|---:|---:|",
+        *multi_summary_rows,
+        "",
+        "| Method | K | Mean recall | Min | Max | Mean lift | Min | Max |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
+        *multi_recall_lift_rows,
+        "",
+        "| K | Mean FB - LR (pp) | Min | Max | Range |",
+        "|---|---:|---:|---:|---:|",
+        *multi_delta_rows,
+        "",
+        "### Multi-holdout customer overlap",
+        "",
+        f"Customers repeat across blocks: {'yes' if multi['customer_overlap']['customers_repeat_across_cutoffs'] else 'no'}. The overlap table below makes the dependency explicit instead of treating each block as a new independent sample.",
+        "",
+        "| Earlier block | Later block | Shared customers | Jaccard similarity | Later customers seen earlier |",
+        "|---|---|---:|---:|---:|",
+        *multi_overlap_rows,
         "",
         "## Calibration and train/holdout diagnostics",
         "",
@@ -488,6 +823,7 @@ def train_and_report(connection: Any, requested_source_file_id: int | None) -> d
     all_examples = _examples(connection, source_file_id, starts)
     train, holdout = split_temporally(all_examples, holdout_start)
     assert_published_holdout_matches(holdout, _published_holdout(connection, source_file_id))
+    multi_holdout = _multi_holdout_comparison(all_examples, starts)
     labels = lambda rows: [int(x.repurchased_in_prediction_window) for x in rows]
     holdout_labels = labels(holdout)
     probabilities = _fit_logistic(train, holdout)
@@ -505,6 +841,7 @@ def train_and_report(connection: Any, requested_source_file_id: int | None) -> d
         },
         "training_diagnostics": _training_diagnostics(train, holdout),
         "rolling_cutoff_overlap": _rolling_cutoff_overlap(all_examples),
+        "multi_holdout": multi_holdout,
         "decision_comparison": _decision_comparison(holdout, _priority_backtest(connection, source_file_id), probabilities, log_probabilities),
         "limits": ["Historical temporal backtest of observed repurchase, not campaign response, uplift, or ROI.", "No propensity scores are written to decision tables.", "Cost or revenue scenarios, if added later, must be labeled simulation based on assumptions."],
     }
