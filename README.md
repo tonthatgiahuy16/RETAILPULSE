@@ -22,7 +22,8 @@ retailer, accounting revenue, campaign results, or causal uplift.
   dbt is a verification and lineage layer; migrations remain the source of
   truth for transformation logic. See [`dbt/README.md`](dbt/README.md).
 - A read-only PostgreSQL `bi` semantic layer and a Power BI Project (PBIP)
-  report with Overview, Customer lifecycle, and Data quality pages.
+  report with Overview, Customer lifecycle, Data quality, and historical model
+  evaluation pages.
 - A temporal holdout decision report comparing RFM, frequency ranking, and
   Logistic Regression at fixed contact capacities, including calibration and
   frequency tie-break diagnostics. See
@@ -33,6 +34,16 @@ retailer, accounting revenue, campaign results, or causal uplift.
 The original workbook and local database are not included. Runtime numbers
 below are historical, local evidence and should not be interpreted as a
 current hosted service or refresh status.
+
+## Power BI dashboard
+
+| <a href="docs/assets/powerbi/01_overview.jpg"><img src="docs/assets/powerbi/01_overview.jpg" alt="Overview" width="400"/></a> | <a href="docs/assets/powerbi/02_customer_lifecycle.jpg"><img src="docs/assets/powerbi/02_customer_lifecycle.jpg" alt="Customer lifecycle" width="400"/></a> |
+| :---: | :---: |
+| [Overview](docs/assets/powerbi/01_overview.jpg) | [Customer lifecycle](docs/assets/powerbi/02_customer_lifecycle.jpg) |
+| <a href="docs/assets/powerbi/03_data_quality.jpg"><img src="docs/assets/powerbi/03_data_quality.jpg" alt="Data quality" width="400"/></a> | <a href="docs/assets/powerbi/04_repurchase_model_evaluation.png"><img src="docs/assets/powerbi/04_repurchase_model_evaluation.png" alt="Repurchase model evaluation" width="400"/></a> |
+| [Data quality](docs/assets/powerbi/03_data_quality.jpg) | [Repurchase model evaluation](docs/assets/powerbi/04_repurchase_model_evaluation.png) |
+
+> **Interpretation limit**: All dashboard metrics reflect a static historical snapshot and backtest evaluation; this report does not represent a live production dashboard, customer streaming, campaign uplift, or ROI measurement. Full report project lives in [`powerbi/RetailPulse.pbip`](powerbi/RetailPulse.pbip).
 
 ## Data source and attribution
 
@@ -150,7 +161,7 @@ candidates are now non-zero; the diagnostic chart now shows the candidate reason
 The training step now persists model and rule-baseline metrics to
 `bi.repurchase_model_evaluation`.
 
-## Power BI
+## Power BI project connection & validation
 
 Open [`powerbi/RetailPulse.pbip`](powerbi/RetailPulse.pbip) in Power BI Desktop.
 The report connects to the PostgreSQL `bi` schema in Import mode. Configure

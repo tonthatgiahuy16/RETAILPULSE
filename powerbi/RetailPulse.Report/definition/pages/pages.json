@@ -3,7 +3,8 @@
   "pageOrder": [
     "retailpulse_overview",
     "retailpulse_customer",
-    "retailpulse_quality"
+    "retailpulse_quality",
+    "retailpulse_model_evaluation"
   ],
   "activePageName": "retailpulse_overview"
 }

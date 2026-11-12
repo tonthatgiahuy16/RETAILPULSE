@@ -1,0 +1,30 @@
+{
+  "run_id": "ci-dashboard-fixture",
+  "started_at": "2026-11-10T09:00:00+00:00",
+  "status": "succeeded",
+  "tasks": [
+    {
+      "name": "ingest",
+      "status": "succeeded",
+      "elapsed_seconds": 2.0,
+      "detail": {
+        "status": "LOADED",
+        "source_file_id": 1,
+        "source_row_count": 12,
+        "committed_raw_row_count": 12
+      }
+    },
+    {
+      "name": "sql_gates",
+      "status": "succeeded",
+      "elapsed_seconds": 1.0,
+      "detail": {"count": 12}
+    },
+    {
+      "name": "dbt_build",
+      "status": "succeeded",
+      "elapsed_seconds": 1.0,
+      "detail": {}
+    }
+  ]
+}

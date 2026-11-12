@@ -20,9 +20,49 @@ EXPECTED_SNAPSHOT_CONSUMERS = {
     "bi repurchase_model_evaluation",
 }
 SNAPSHOT_TABLE = "bi source_snapshot"
-EXPECTED_PAGES = ["retailpulse_overview", "retailpulse_customer", "retailpulse_quality"]
+EXPECTED_PAGES = [
+    "retailpulse_overview",
+    "retailpulse_customer",
+    "retailpulse_quality",
+    "retailpulse_model_evaluation",
+]
 CONNECTION_PARAMETERS = {"RetailPulsePostgresServer", "RetailPulsePostgresDatabase"}
 EXPECTED_QUALITY_KPIS = {"baseline_precision", "baseline_recall", "baseline_accuracy"}
+EXPECTED_MODEL_EVALUATION_CARDS = {
+    "logistic_roc_auc",
+    "logistic_pr_auc",
+    "logistic_lift_top_20",
+    "logistic_brier_score",
+}
+SNAPSHOT_GUARDED_MODEL_MEASURES = {
+    "Logistic Regression ROC-AUC",
+    "Logistic Regression PR-AUC",
+    "Logistic Regression Lift at top 20%",
+    "Logistic Regression Brier score",
+    "Holdout customer count",
+    "Evaluation date",
+    "Evaluation method coverage",
+    "Evaluation Precision at threshold",
+    "Evaluation Recall at threshold",
+    "Comparison decision threshold",
+    "Comparison holdout customers",
+    "Comparison precision at threshold",
+    "Comparison recall at threshold",
+    "Comparison PR-AUC",
+    "Comparison ROC-AUC",
+    "Comparison Lift at top 20%",
+    "Comparison Brier score",
+}
+ROW_SCOPED_COMPARISON_MEASURES = {
+    "Comparison decision threshold",
+    "Comparison holdout customers",
+    "Comparison precision at threshold",
+    "Comparison recall at threshold",
+    "Comparison PR-AUC",
+    "Comparison ROC-AUC",
+    "Comparison Lift at top 20%",
+    "Comparison Brier score",
+}
 
 # TMDL omits properties that equal their model default. A relationship is
 # many-to-one unless it states otherwise, so Power BI Desktop drops
@@ -135,6 +175,36 @@ def validate_model(model_dir: Path) -> list[str]:
         for relationship_name in re.findall(r"^\s*relationship: ([^\r\n]+)", content, flags=re.MULTILINE):
             if relationship_name not in relationship_names:
                 fail(errors, f"{table_name}: variation refers to missing relationship {relationship_name}")
+    model_evaluation = tables.get("bi repurchase_model_evaluation", "")
+    for measure_name in SNAPSHOT_GUARDED_MODEL_MEASURES:
+        match = re.search(
+            rf"^\tmeasure '{re.escape(measure_name)}' =(?P<body>.*?)(?=^\tmeasure |^\tcolumn |^\tpartition |\Z)",
+            model_evaluation,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        if match is None or "HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] )" not in match.group("body"):
+            fail(errors, f"bi repurchase_model_evaluation: {measure_name} must blank outside one selected snapshot")
+    for measure_name in ROW_SCOPED_COMPARISON_MEASURES:
+        match = re.search(
+            rf"^\tmeasure '{re.escape(measure_name)}' =(?P<body>.*?)(?=^\tmeasure |^\tcolumn |^\tpartition |\Z)",
+            model_evaluation,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        if match is None or "ISINSCOPE ( 'bi repurchase_model_evaluation'[model_display_name] )" not in match.group("body"):
+            fail(errors, f"bi repurchase_model_evaluation: {measure_name} must blank on the comparison total row")
+    for measure_name in {
+        "Logistic Regression ROC-AUC",
+        "Logistic Regression PR-AUC",
+        "Logistic Regression Lift at top 20%",
+        "Logistic Regression Brier score",
+    }:
+        match = re.search(
+            rf"^\tmeasure '{re.escape(measure_name)}' =(?P<body>.*?)(?=^\tmeasure |^\tcolumn |^\tpartition |\Z)",
+            model_evaluation,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        if match is None or 'model_name] = "logistic_regression_v1"' not in match.group("body"):
+            fail(errors, f"bi repurchase_model_evaluation: {measure_name} must filter the persisted logistic_regression_v1 row")
     return errors
 
 
@@ -153,6 +223,11 @@ def validate_report(report_dir: Path) -> list[str]:
     pages = json.loads((report_dir / "pages" / "pages.json").read_text(encoding="utf-8"))
     if pages["pageOrder"] != EXPECTED_PAGES:
         fail(errors, "dashboard page order does not match the governed report design")
+    model_page_json = report_dir / "pages" / "retailpulse_model_evaluation" / "page.json"
+    if not model_page_json.exists():
+        fail(errors, "retailpulse_model_evaluation: missing page definition")
+    elif json.loads(model_page_json.read_text(encoding="utf-8")).get("displayName") != "04 Repurchase model evaluation":
+        fail(errors, "retailpulse_model_evaluation: page title must describe historical model evaluation")
     for page in EXPECTED_PAGES:
         slicer = report_dir / "pages" / page / "visuals" / "source_snapshot_slicer" / "visual.json"
         if not slicer.exists():
@@ -167,6 +242,14 @@ def validate_report(report_dir: Path) -> list[str]:
             fail(errors, f"{page}: source snapshot slicer has an invalid query")
         if has_persisted_filter(slicer_payload.get("visual", {}).get("objects", {})):
             fail(errors, f"{page}: source snapshot slicer must not pin a snapshot filter")
+        slicers = []
+        for visual_path in (report_dir / "pages" / page / "visuals").glob("*/visual.json"):
+            visual = json.loads(visual_path.read_text(encoding="utf-8"))
+            if visual.get("visual", {}).get("visualType") == "slicer":
+                slicers.append(visual_path.parent.name)
+        slicers.sort()
+        if slicers != ["source_snapshot_slicer"]:
+            fail(errors, f"{page}: only the source snapshot slicer is allowed, found {slicers}")
     priority_table = (
         report_dir / "pages" / "retailpulse_customer" / "visuals" / "priority_table" / "visual.json"
     )
@@ -194,6 +277,70 @@ def validate_report(report_dir: Path) -> list[str]:
             fail(errors, f"retailpulse_quality: {visual_name} must be a card")
         if "bi repurchase_baseline_evaluation" not in json.dumps(visual_payload):
             fail(errors, f"retailpulse_quality: {visual_name} does not use the baseline contract")
+    quality_model_comparison = report_dir / "pages" / "retailpulse_quality" / "visuals" / "model_comparison"
+    if quality_model_comparison.exists():
+        fail(errors, "retailpulse_quality: model comparison must live on the model-evaluation page")
+
+    model_page = report_dir / "pages" / "retailpulse_model_evaluation" / "visuals"
+    for visual_name in {
+        "evaluation_snapshot",
+        "evaluation_holdout_size",
+        "evaluation_date",
+        "evaluation_method_coverage",
+    }:
+        provenance = model_page / visual_name / "visual.json"
+        if not provenance.exists() or "bi repurchase_model_evaluation" not in provenance.read_text(encoding="utf-8"):
+            fail(errors, f"retailpulse_model_evaluation: missing backtest provenance card {visual_name}")
+    for visual_name in EXPECTED_MODEL_EVALUATION_CARDS:
+        visual_path = model_page / visual_name / "visual.json"
+        if not visual_path.exists():
+            fail(errors, f"retailpulse_model_evaluation: missing {visual_name} card")
+            continue
+        visual_payload = json.loads(visual_path.read_text(encoding="utf-8"))
+        if visual_payload.get("visual", {}).get("visualType") != "card":
+            fail(errors, f"retailpulse_model_evaluation: {visual_name} must be a card")
+        if "bi repurchase_model_evaluation" not in json.dumps(visual_payload):
+            fail(errors, f"retailpulse_model_evaluation: {visual_name} does not use model evaluation data")
+    model_comparison = model_page / "model_comparison" / "visual.json"
+    if not model_comparison.exists() or "bi repurchase_model_evaluation" not in model_comparison.read_text(encoding="utf-8"):
+        fail(errors, "retailpulse_model_evaluation: missing persisted model comparison")
+    else:
+        comparison_payload = json.loads(model_comparison.read_text(encoding="utf-8"))
+        if "model_display_name" not in json.dumps(comparison_payload):
+            fail(errors, "retailpulse_model_evaluation: model comparison must use business-friendly model names")
+        total_show = (
+            comparison_payload.get("visual", {})
+            .get("objects", {})
+            .get("total", [{}])[0]
+            .get("properties", {})
+            .get("show", {})
+            .get("expr", {})
+            .get("Literal", {})
+            .get("Value")
+        )
+        if total_show != "false":
+            fail(errors, "retailpulse_model_evaluation: model comparison must set totals visibility to false")
+        for display_name in {
+            "Comparison decision threshold",
+            "Comparison holdout customers",
+            "Comparison precision at threshold",
+            "Comparison recall at threshold",
+            "Comparison PR-AUC",
+            "Comparison ROC-AUC",
+            "Comparison Lift at top 20%",
+            "Comparison Brier score",
+        }:
+            if display_name not in json.dumps(comparison_payload):
+                fail(errors, f"retailpulse_model_evaluation: comparison must use total-safe measure {display_name}")
+    tradeoff = model_page / "threshold_tradeoff" / "visual.json"
+    if not tradeoff.exists():
+        fail(errors, "retailpulse_model_evaluation: missing threshold precision/recall comparison")
+    else:
+        tradeoff_payload = json.loads(tradeoff.read_text(encoding="utf-8"))
+        if tradeoff_payload.get("visual", {}).get("visualType") != "clusteredBarChart":
+            fail(errors, "retailpulse_model_evaluation: threshold trade-off must be a clustered bar chart")
+        if "model_display_name" not in json.dumps(tradeoff_payload) or "Evaluation Precision at threshold" not in json.dumps(tradeoff_payload) or "Evaluation Recall at threshold" not in json.dumps(tradeoff_payload):
+            fail(errors, "retailpulse_model_evaluation: threshold chart must compare named methods on precision and recall")
     for path in report_dir.rglob("*.json"):
         json.loads(path.read_text(encoding="utf-8"))
     return errors

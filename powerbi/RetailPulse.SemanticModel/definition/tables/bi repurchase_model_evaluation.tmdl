@@ -1,6 +1,147 @@
 table 'bi repurchase_model_evaluation'
 	lineageTag: 983efab7-3603-44ac-8062-ee659f144f27
 
+	measure 'Logistic Regression ROC-AUC' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] ),
+				CALCULATE (
+					MAX ( 'bi repurchase_model_evaluation'[roc_auc] ),
+					'bi repurchase_model_evaluation'[model_name] = "logistic_regression_v1"
+				)
+			)
+		formatString: 0.0000
+
+	measure 'Logistic Regression PR-AUC' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] ),
+				CALCULATE (
+					MAX ( 'bi repurchase_model_evaluation'[pr_auc] ),
+					'bi repurchase_model_evaluation'[model_name] = "logistic_regression_v1"
+				)
+			)
+		formatString: 0.0000
+
+	measure 'Logistic Regression Lift at top 20%' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] ),
+				CALCULATE (
+					MAX ( 'bi repurchase_model_evaluation'[lift_at_top_20_percent] ),
+					'bi repurchase_model_evaluation'[model_name] = "logistic_regression_v1"
+				)
+			)
+		formatString: 0.0000"x"
+
+	measure 'Logistic Regression Brier score' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] ),
+				CALCULATE (
+					MAX ( 'bi repurchase_model_evaluation'[brier_score] ),
+					'bi repurchase_model_evaluation'[model_name] = "logistic_regression_v1"
+				)
+			)
+		formatString: 0.0000
+
+	measure 'Evaluation snapshot ID' = SELECTEDVALUE ( 'bi repurchase_model_evaluation'[source_file_id] )
+		formatString: 0
+
+	measure 'Holdout customer count' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] ),
+				MAX ( 'bi repurchase_model_evaluation'[customer_count] )
+			)
+		formatString: #,0
+
+	measure 'Evaluation date' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] ),
+				MAX ( 'bi repurchase_model_evaluation'[evaluated_at] )
+			)
+		formatString: yyyy-mm-dd
+
+	measure 'Evaluation method coverage' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] ),
+				FORMAT ( DISTINCTCOUNT ( 'bi repurchase_model_evaluation'[model_name] ), "0" ) & " / 3"
+			)
+
+	measure 'Evaluation Precision at threshold' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] ),
+				MAX ( 'bi repurchase_model_evaluation'[precision_at_threshold] )
+			)
+		formatString: 0.0%
+
+	measure 'Evaluation Recall at threshold' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] ),
+				MAX ( 'bi repurchase_model_evaluation'[recall_at_threshold] )
+			)
+		formatString: 0.0%
+
+	measure 'Comparison decision threshold' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] )
+					&& ISINSCOPE ( 'bi repurchase_model_evaluation'[model_display_name] ),
+				MAX ( 'bi repurchase_model_evaluation'[decision_threshold] )
+			)
+		formatString: 0.00
+
+	measure 'Comparison holdout customers' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] )
+					&& ISINSCOPE ( 'bi repurchase_model_evaluation'[model_display_name] ),
+				MAX ( 'bi repurchase_model_evaluation'[customer_count] )
+			)
+		formatString: #,0
+
+	measure 'Comparison precision at threshold' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] )
+					&& ISINSCOPE ( 'bi repurchase_model_evaluation'[model_display_name] ),
+				MAX ( 'bi repurchase_model_evaluation'[precision_at_threshold] )
+			)
+		formatString: 0.0%
+
+	measure 'Comparison recall at threshold' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] )
+					&& ISINSCOPE ( 'bi repurchase_model_evaluation'[model_display_name] ),
+				MAX ( 'bi repurchase_model_evaluation'[recall_at_threshold] )
+			)
+		formatString: 0.0%
+
+	measure 'Comparison PR-AUC' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] )
+					&& ISINSCOPE ( 'bi repurchase_model_evaluation'[model_display_name] ),
+				MAX ( 'bi repurchase_model_evaluation'[pr_auc] )
+			)
+		formatString: 0.0%
+
+	measure 'Comparison ROC-AUC' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] )
+					&& ISINSCOPE ( 'bi repurchase_model_evaluation'[model_display_name] ),
+				MAX ( 'bi repurchase_model_evaluation'[roc_auc] )
+			)
+		formatString: 0.000
+
+	measure 'Comparison Lift at top 20%' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] )
+					&& ISINSCOPE ( 'bi repurchase_model_evaluation'[model_display_name] ),
+				MAX ( 'bi repurchase_model_evaluation'[lift_at_top_20_percent] )
+			)
+		formatString: 0.00"x"
+
+	measure 'Comparison Brier score' =
+			IF (
+				HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] )
+					&& ISINSCOPE ( 'bi repurchase_model_evaluation'[model_display_name] ),
+				MAX ( 'bi repurchase_model_evaluation'[brier_score] )
+			)
+		formatString: 0.000
+
 	column source_file_id
 		dataType: int64
 		formatString: 0
@@ -15,6 +156,14 @@ table 'bi repurchase_model_evaluation'
 		lineageTag: d39e5a8e-2b3d-4a0d-9fcd-9c136a83e4b5
 		summarizeBy: none
 		sourceColumn: model_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column model_display_name
+		dataType: string
+		lineageTag: 5c20fd56-5e35-4f9f-b9da-89a1b5ce2747
+		summarizeBy: none
+		sourceColumn: model_display_name
 
 		annotation SummarizationSetBy = Automatic
 
@@ -138,9 +287,18 @@ table 'bi repurchase_model_evaluation'
 		source =
 				let
 				    Source = PostgreSQL.Database(RetailPulsePostgresServer, RetailPulsePostgresDatabase),
-					    bi_repurchase_model_evaluation = Source{[Schema="bi",Item="repurchase_model_evaluation"]}[Data]
+				    bi_repurchase_model_evaluation = Source{[Schema="bi",Item="repurchase_model_evaluation"]}[Data],
+				    model_display_name = Table.AddColumn(
+				        bi_repurchase_model_evaluation,
+				        "model_display_name",
+				        each if [model_name] = "logistic_regression_v1" then "Logistic Regression"
+				        else if [model_name] = "log1p_logistic_regression_sensitivity" then "Logistic Regression (log1p sensitivity)"
+				        else if [model_name] = "frequency_gte_2_rule" then "Frequency Business (frequency >= 2)"
+				        else [model_name],
+				        type text
+				    )
 					in
-					    bi_repurchase_model_evaluation
+				    model_display_name
 
 	annotation PBI_NavigationStepName = Navigation
 

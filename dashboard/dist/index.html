@@ -3,136 +3,860 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="RetailPulse illustrative retail pipeline snapshot dashboard" />
-    <title>RetailPulse | Illustrative Analytics Snapshot</title>
+    <meta name="description" content="RetailPulse portfolio executive brief: data engineering pipeline, audit reconciliation, and model evaluation" />
+    <title>RetailPulse | Portfolio Architecture &amp; Analytical Brief</title>
     <style>
-      :root { --ink:#10233f; --muted:#62728a; --canvas:#f5f7fb; --panel:#fff; --line:#dfe6f0; --blue:#2563eb; --teal:#0f766e; --amber:#d97706; --rose:#be123c; --shadow:0 12px 32px rgba(28,48,83,.08); }
-      * { box-sizing:border-box; }
-      body { margin:0; color:var(--ink); background:var(--canvas); font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-      .shell { max-width:1240px; margin:0 auto; padding:32px 24px 56px; }
-      header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; padding:8px 0 30px; }
-      .eyebrow { margin:0 0 8px; color:var(--blue); font-size:.75rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
-      h1 { margin:0; font-size:clamp(2rem,4vw,3.35rem); line-height:1.02; letter-spacing:-.05em; }
-      .sub { max-width:700px; margin:14px 0 0; color:var(--muted); font-size:1rem; line-height:1.6; }
-      .badge { flex:0 0 auto; border:1px solid #bce9dd; background:#e9fbf5; color:#0f5f52; border-radius:999px; padding:9px 13px; font-size:.82rem; font-weight:700; }
-      .snapshot { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:22px; }
-      .chip { background:#eaf0ff; color:#2955af; border-radius:999px; font-size:.78rem; font-weight:700; padding:7px 10px; }
-      .grid { display:grid; gap:16px; }
-      .metrics { grid-template-columns:repeat(4, minmax(0,1fr)); }
-      .card { background:var(--panel); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); padding:20px; }
-      .metric-label { color:var(--muted); font-size:.8rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
-      .metric { margin:7px 0 6px; font-size:1.9rem; font-weight:800; letter-spacing:-.04em; }
-      .metric-note { margin:0; color:var(--muted); font-size:.82rem; }
-      .section { margin-top:30px; }
-      .section-title { display:flex; align-items:end; justify-content:space-between; gap:18px; margin-bottom:14px; }
-      h2 { margin:0; font-size:1.25rem; letter-spacing:-.025em; }
-      .section-title p { margin:0; color:var(--muted); font-size:.86rem; }
-      .two { grid-template-columns:1.4fr 1fr; }
-      .three { grid-template-columns:repeat(3,1fr); }
-      .chart-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
-      .chart-head b { font-size:1.02rem; }
-      .chart-head span { color:var(--muted); font-size:.82rem; }
-      .waterfall { display:grid; gap:16px; }
-      .bar-row { display:grid; grid-template-columns:120px 1fr 106px; align-items:center; gap:12px; font-size:.86rem; }
-      .track { height:12px; overflow:hidden; background:#edf1f7; border-radius:99px; }
-      .fill { height:100%; border-radius:99px; }
-      .blue { background:linear-gradient(90deg,#3974ef,#75a1ff); } .teal { background:linear-gradient(90deg,#138978,#4ac5b2); } .rose { background:linear-gradient(90deg,#d94765,#fb9bb0); } .amber { background:linear-gradient(90deg,#d88518,#f1bf69); }
-      .value { text-align:right; font-weight:750; }
-      .donut-wrap { display:grid; grid-template-columns:150px 1fr; align-items:center; gap:22px; }
-      .donut { width:150px; height:150px; border-radius:50%; background:conic-gradient(var(--teal) 0 25.2%, var(--amber) 25.2% 34.6%, var(--rose) 34.6% 100%); position:relative; }
-      .donut:after { content:"19,494\A cancellations"; white-space:pre; position:absolute; inset:25px; display:grid; place-items:center; text-align:center; border-radius:50%; background:#fff; color:var(--ink); font-size:.78rem; font-weight:800; line-height:1.35; }
-      .legend { display:grid; gap:12px; }
-      .legend div { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:.87rem; }
-      .dot { width:10px; height:10px; display:inline-block; border-radius:50%; margin-right:8px; }
-      .legend-name { display:flex; align-items:center; color:var(--muted); }
-      .callout { border-left:4px solid var(--amber); background:#fff9ed; border-radius:0 14px 14px 0; padding:16px 18px; color:#775017; font-size:.9rem; line-height:1.55; }
-      .rfm { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
-      .rfm div { border-radius:14px; padding:15px; background:#f7f9fd; }
-      .rfm span { display:block; color:var(--muted); font-size:.78rem; font-weight:700; text-transform:uppercase; }
-      .rfm b { display:block; margin-top:7px; font-size:1.2rem; }
-      .score { margin-top:10px; height:10px; overflow:hidden; border-radius:999px; background:#edf1f7; }
-      .score i { display:block; height:100%; background:var(--blue); border-radius:inherit; }
-      .footer { margin-top:32px; padding:22px 0 0; border-top:1px solid var(--line); color:var(--muted); font-size:.82rem; line-height:1.55; }
-      @media (max-width:900px) { .metrics,.three { grid-template-columns:repeat(2,1fr); } .two { grid-template-columns:1fr; } }
-      @media (max-width:600px) { .shell { padding:24px 16px 40px; } header { display:block; } .badge { display:inline-block; margin-top:16px; } .metrics,.three,.rfm { grid-template-columns:1fr; } .bar-row { grid-template-columns:90px 1fr 78px; gap:8px; font-size:.76rem; } .donut-wrap { grid-template-columns:1fr; } }
+      :root {
+        --ink: #10233f;
+        --muted: #5a6b82;
+        --canvas: #f6f8fb;
+        --panel: #ffffff;
+        --line: #dfe5ef;
+        --blue: #2563eb;
+        --blue-tint: #eff4fe;
+        --teal: #0f766e;
+        --teal-tint: #ecfdf5;
+        --amber: #b45309;
+        --amber-tint: #fffbeb;
+        --rose: #be123c;.8
+        --purple: #6366f1;
+        --purple-tint: #f5f3ff;
+        --shadow: 0 10px 28px rgba(16, 35, 63, 0.06);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--canvas);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+      .shell { max-width: 1240px; margin: 0 auto; padding: 36px 24px 64px; }
+      header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--line);
+      }
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--blue);
+        font-size: 0.8rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 3.8vw, 3.1rem);
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+      }
+      .sub {
+        max-width: 780px;
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 1.02rem;
+        line-height: 1.6;
+      }
+      .badge-brief {
+        flex: 0 0 auto;
+        border: 1px solid #cbd5e1;
+        background: #f1f5f9;
+        color: #334155;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .snapshot-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 22px 0 16px;
+      }
+      .chip {
+        background: var(--blue-tint);
+        color: #1e40af;
+        border: 1px solid #dbeafe;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 6px 12px;
+      }
+
+      /* Sections & Cards */
+      .section { margin-top: 36px; }
+      .section-head { margin-bottom: 16px; }
+      .section-head h2 {
+        margin: 0;
+        font-size: 1.35rem;
+        letter-spacing: -0.03em;
+      }
+      .section-head p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .grid { display: grid; gap: 16px; }
+      .metrics-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .two-col { grid-template-columns: 1fr 1fr; }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        padding: 22px;
+      }
+      .metric-label {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 750;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      .metric-val {
+        margin: 8px 0 6px;
+        font-size: 1.95rem;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+      .metric-note {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.83rem;
+        line-height: 1.45;
+      }
+
+      /* Static Notice Banner & Provenance Metadata */
+      .static-notice-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin: 16px 0 28px;
+        color: #92400e;
+        font-size: 0.85rem;
+        line-height: 1.5;
+      }
+      .notice-badge {
+        flex: 0 0 auto;
+        background: #d97706;
+        color: #ffffff;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        padding: 4px 8px;
+        border-radius: 6px;
+      }
+      .provenance-meta {
+        margin-top: 12px;
+        padding-top: 8px;
+        border-top: 1px dashed var(--line);
+        font-size: 0.73rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      .provenance-meta b {
+        color: #334155;
+      }
+      .provenance-meta code {
+        font-family: inherit;
+        background: #f1f5f9;
+        color: #0f172a;
+        padding: 1px 4px;
+        border-radius: 4px;
+        font-size: 0.72rem;
+      }
+
+      /* Lineage Flow Diagram */
+      .lineage-card {
+        padding: 24px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+      }
+      .flow-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        margin-top: 14px;
+        align-items: stretch;
+      }
+      .flow-node {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fafcff;
+        padding: 14px;
+        position: relative;
+      }
+      .flow-node b {
+        display: block;
+        font-size: 0.86rem;
+        color: var(--ink);
+        margin-bottom: 4px;
+      }
+      .flow-node span {
+        font-size: 0.76rem;
+        color: var(--muted);
+        line-height: 1.35;
+        display: block;
+      }
+      .dbt-banner {
+        margin-top: 16px;
+        padding: 12px 16px;
+        background: var(--amber-tint);
+        border: 1px solid #fde68a;
+        border-radius: 10px;
+        color: #92400e;
+        font-size: 0.84rem;
+        line-height: 1.5;
+      }
+
+      /* Evidence Cluster Cards */
+      .evidence-card {
+        border-top: 4px solid var(--blue);
+      }
+      .evidence-card.model-cluster {
+        border-top-color: var(--purple);
+      }
+      .badge-tag {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .tag-blue { background: #dbeafe; color: #1e40af; }
+      .tag-purple { background: #ede9fe; color: #5b21b6; }
+      .audit-list {
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .audit-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 8px 0;
+        border-bottom: 1px dashed var(--line);
+        font-size: 0.86rem;
+      }
+      .audit-list li:last-child { border-bottom: none; }
+      .audit-label { color: var(--muted); }
+      .audit-val { font-weight: 700; text-align: right; }
+
+      /* Interactive Budget Selector */
+      .btn-group {
+        display: inline-flex;
+        background: #e2e8f0;
+        border-radius: 999px;
+        padding: 4px;
+        gap: 4px;
+      }
+      .btn-pill {
+        border: none;
+        background: transparent;
+        padding: 7px 16px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #475569;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+      }
+      .btn-pill.active {
+        background: var(--blue);
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+      }
+      .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+        font-size: 0.88rem;
+      }
+      .comparison-table th {
+        text-align: left;
+        padding: 9px 12px;
+        background: #f8fafc;
+        border-bottom: 2px solid var(--line);
+        color: var(--muted);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .comparison-table td {
+        padding: 11px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      .callout {
+        border-left: 4px solid var(--amber);
+        background: var(--amber-tint);
+        border-radius: 0 12px 12px 0;
+        padding: 14px 18px;
+        color: #78350f;
+        font-size: 0.86rem;
+        line-height: 1.55;
+        margin-top: 16px;
+      }
+
+      /* Charts & Distribution Rows */
+      .chart-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+      .chart-head b { font-size: 0.98rem; }
+      .chart-head span { color: var(--muted); font-size: 0.8rem; }
+      .waterfall { display: grid; gap: 12px; }
+      .bar-row {
+        display: grid;
+        grid-template-columns: 130px 1fr 100px;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.85rem;
+      }
+      .track { height: 10px; overflow: hidden; background: #edf1f7; border-radius: 99px; }
+      .fill { height: 100%; border-radius: 99px; }
+      .fill-blue { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+      .fill-rose { background: linear-gradient(90deg, #e11d48, #fb7185); }
+      .fill-teal { background: linear-gradient(90deg, #0d9488, #2dd4bf); }
+
+      .donut-wrap {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        margin-top: 6px;
+      }
+      .donut {
+        flex: 0 0 130px;
+        width: 130px; height: 130px; border-radius: 50%;
+        background: conic-gradient(var(--teal) 0 25.2%, var(--amber) 25.2% 34.6%, var(--rose) 34.6% 100%);
+        display: grid;
+        place-items: center;
+        position: relative;
+      }
+      .donut-hole {
+        width: 86px; height: 86px;
+        border-radius: 50%;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+      .donut-hole b {
+        font-size: 0.82rem;
+        font-weight: 800;
+        color: var(--ink);
+        line-height: 1.1;
+      }
+      .donut-hole span {
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.1;
+        margin-top: 2px;
+      }
+      .legend { flex: 1; display: grid; gap: 8px; }
+      .legend-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.84rem; }
+      .dot { width: 9px; height: 9px; display: inline-block; border-radius: 50%; margin-right: 6px; }
+
+      footer {
+        margin-top: 48px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.83rem;
+        line-height: 1.6;
+      }
+      @media (max-width: 900px) {
+        .metrics-4 { grid-template-columns: repeat(2, 1fr); }
+        .two-col, .flow-grid { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 600px) {
+        .shell { padding: 24px 16px 48px; }
+        header { display: block; }
+        .badge-brief { display: inline-block; margin-top: 14px; }
+        .metrics-4 { grid-template-columns: 1fr; }
+        .donut-wrap { flex-direction: column; }
+      }
     </style>
   </head>
   <body>
     <main class="shell">
       <header>
         <div>
-          <p class="eyebrow">RetailPulse / illustrative static view</p>
-          <h1>Retail analytics snapshot (Illustrative)</h1>
-          <p class="sub">A static illustrative demonstration of the Online Retail II pipeline analytics. Values reflect historical snapshot numbers from a 2026-10-29 run for demonstration only; this static mockup is not connected to a live operational feed or verified automatically.</p>
+          <p class="eyebrow">RetailPulse / Portfolio Executive Brief</p>
+          <h1>RetailPulse Pipeline &amp; Model Evaluation</h1>
+          <p class="sub">
+            Data engineering pipeline, audit reconciliation, and historical repurchase backtesting derived from the
+            <strong>Online Retail II</strong> dataset (2009–2011). Serves as an executive portfolio brief.
+          </p>
         </div>
-        <span class="badge" style="border-color:#d0d7de; background:#f6f8fa; color:#57606a;">Illustrative snapshot</span>
+        <span class="badge-brief">Portfolio Brief</span>
       </header>
 
-      <div class="snapshot">
-        <span class="chip">Source snapshot: Online Retail II</span>
-        <span class="chip">1,067,371 source rows</span>
-        <span class="chip">Event period: 2009–2011</span>
-        <span class="chip">Published contracts: staging → marts</span>
+      <div class="snapshot-bar">
+        <span class="chip">Source Dataset: Online Retail II</span>
+        <span class="chip">Event Span: 2009–2011</span>
+        <span class="chip">Engine: PostgreSQL + Python</span>
+        <span class="chip">Quality Adapter: dbt core</span>
+        <span class="chip">Governed Analytics: Power BI PBIP</span>
       </div>
 
-      <section class="grid metrics" aria-label="Executive metrics">
-        <article class="card"><div class="metric-label">Gross sales</div><div class="metric">$20.81m</div><p class="metric-note">Event-date amount, before cancellations</p></article>
-        <article class="card"><div class="metric-label">Net transactions</div><div class="metric">$19.29m</div><p class="metric-note">Gross sales plus signed cancellations</p></article>
-        <article class="card"><div class="metric-label">Customer events</div><div class="metric">36,969</div><p class="metric-note">Eligible customer × invoice events</p></article>
-        <article class="card"><div class="metric-label">RFM customers</div><div class="metric">5,878</div><p class="metric-note">One row per customer and source snapshot</p></article>
-      </section>
-
-      <section class="section">
-        <div class="section-title"><div><h2>Revenue and data completeness</h2><p>Event-date revenue mart at source snapshot × day grain.</p></div><p>604 published days</p></div>
-        <div class="grid two">
-          <article class="card">
-            <div class="chart-head"><b>Transaction composition</b><span>USD, rounded</span></div>
-            <div class="waterfall">
-              <div class="bar-row"><span>Gross sales</span><div class="track"><div class="fill blue" style="width:100%"></div></div><span class="value">$20.81m</span></div>
-              <div class="bar-row"><span>Cancellations</span><div class="track"><div class="fill rose" style="width:7.3%"></div></div><span class="value">−$1.53m</span></div>
-              <div class="bar-row"><span>Net amount</span><div class="track"><div class="fill teal" style="width:92.7%"></div></div><span class="value">$19.29m</span></div>
-            </div>
-          </article>
-          <article class="card">
-            <div class="chart-head"><b>Known customer coverage</b><span>Source-row level</span></div>
-            <div class="metric">77.2%</div>
-            <p class="metric-note">824,364 rows carry a Customer ID; 243,007 missing IDs remain in revenue rather than being discarded.</p>
-            <div class="score"><i style="width:77.2%"></i></div>
-          </article>
+      <!-- Static Artifact Notice -->
+      <div class="static-notice-banner" role="note">
+        <span class="notice-badge">Static Snapshot</span>
+        <div>
+          <strong>Pre-Rendered Analytical Brief:</strong>
+          All figures on this page are <em>frozen historical metrics</em> generated from recorded pipeline run <code>8c0fc3c3e9ca</code> (2026-11-10) and model evaluation artifact (2026-11-11).
+          This static HTML file is <strong>not</strong> connected to a live operational feed and does <strong>not</strong> auto-refresh with ongoing pipeline runs or Power BI modifications.
+          For live interactive exploration, governed semantic models, and cross-filtering, open the Power BI PBIP project in <code>powerbi/</code>.
         </div>
-      </section>
+      </div>
 
-      <section class="section">
-        <div class="section-title"><div><h2>Cancellation evidence</h2><p>Candidate matching is diagnostic only; it never changes revenue.</p></div><p>19,494 cancellation rows</p></div>
-        <div class="grid two">
-          <article class="card donut-wrap">
-            <div class="donut" aria-label="25.2 percent matched candidate, 9.4 percent ambiguous, 65.4 percent unmatched"></div>
-            <div class="legend">
-              <div><span class="legend-name"><i class="dot" style="background:var(--teal)"></i>Matched candidate</span><b>4,907</b></div>
-              <div><span class="legend-name"><i class="dot" style="background:var(--amber)"></i>Ambiguous</span><b>1,833</b></div>
-              <div><span class="legend-name"><i class="dot" style="background:var(--rose)"></i>Unmatched</span><b>12,754</b></div>
-            </div>
-          </article>
-          <aside class="callout"><strong>Interpret carefully.</strong> A matched candidate is one heuristic edge using source snapshot, customer, stock code, quantity magnitude, and order. It is not proof of a return, does not modify the staging cancellation status, and is not netted from revenue as an accounting adjustment.</aside>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="section-title"><div><h2>Customer lifecycle</h2><p>Customer marts exclude missing Customer IDs by contract and retain cancellation diagnostics separately.</p></div><p>Data-derived as-of date</p></div>
-        <div class="grid three">
-          <article class="card"><div class="metric-label">RFM snapshot</div><div class="metric">5,878</div><p class="metric-note">Customers with a customer purchase event in the source snapshot.</p></article>
-          <article class="card"><div class="metric-label">Repurchase labels</div><div class="metric">2,784</div><p class="metric-note">Customers active in the 180-day observation window.</p></article>
-          <article class="card"><div class="metric-label">Observed repurchase</div><div class="metric">1,722</div><p class="metric-note">Customers buying again in the final 90-day prediction window.</p></article>
-        </div>
-        <article class="card" style="margin-top:16px">
-          <div class="chart-head"><b>Frequency ≥ 2 baseline</b><span>Evaluation, not a production prediction service</span></div>
-          <div class="rfm"><div><span>Accuracy</span><b>66.0%</b></div><div><span>Precision</span><b>75.3%</b></div><div><span>Recall</span><b>67.1%</b></div></div>
+      <!-- Core Executive Numbers -->
+      <section class="grid metrics-4" aria-label="Executive numbers">
+        <article class="card">
+          <div class="metric-label">Gross sales</div>
+          <div class="metric-val">$20.81m</div>
+          <p class="metric-note">Event-date transaction amount before cancellations.</p>
+          <div class="provenance-meta">
+            <b>Source:</b> <code>mart.revenue_daily</code> / <code>bi.sales_daily</code><br />
+            <b>Grain:</b> Snapshot 1 &times; 604 published days (2009–2011)<br />
+            <b>Contract:</b> <code>docs/architecture/MART_REVENUE_DAILY.md</code>
+          </div>
+        </article>
+        <article class="card">
+          <div class="metric-label">Net transactions</div>
+          <div class="metric-val">$19.29m</div>
+          <p class="metric-note">Gross sales combined with signed cancellation values.</p>
+          <div class="provenance-meta">
+            <b>Source:</b> <code>mart.revenue_daily.net_transaction_amount</code><br />
+            <b>Calculation:</b> $20.81m gross &minus; $1.53m signed cancellations<br />
+            <b>Contract:</b> <code>docs/architecture/KPI_DICTIONARY.md:28</code>
+          </div>
+        </article>
+        <article class="card">
+          <div class="metric-label">Customer purchase events</div>
+          <div class="metric-val">36,969</div>
+          <p class="metric-note">Identified customer &times; invoice events after cleaning.</p>
+          <div class="provenance-meta">
+            <b>Source:</b> <code>int.customer_purchase_event_snapshot</code><br />
+            <b>Grain:</b> <code>(customer_id, invoice_no)</code> &bull; Snapshot 1<br />
+            <b>Contract:</b> <code>docs/architecture/CUSTOMER_PURCHASE_EVENT.md</code>
+          </div>
+        </article>
+        <article class="card">
+          <div class="metric-label">RFM customers</div>
+          <div class="metric-val">5,878</div>
+          <p class="metric-note">Unique eligible customers tracked in snapshot marts.</p>
+          <div class="provenance-meta">
+            <b>Source:</b> <code>mart.customer_rfm_snapshot</code> / <code>bi.customer_lifecycle_snapshot</code><br />
+            <b>Grain:</b> Unique <code>customer_id</code> in Snapshot 1<br />
+            <b>Contract:</b> <code>docs/architecture/CUSTOMER_RFM_SNAPSHOT.md</code>
+          </div>
         </article>
       </section>
 
+      <!-- Section 1: Lineage & System Architecture -->
+      <section class="section">
+        <div class="section-head">
+          <h2>1. Data Lineage &amp; Pipeline Architecture</h2>
+          <p>PostgreSQL migrations and views own transformation logic. dbt acts as a contract test suite and documentation adapter.</p>
+        </div>
+        <div class="lineage-card">
+          <div class="flow-grid">
+            <div class="flow-node">
+              <b>1. Excel Snapshot</b>
+              <span>Source workbook (.xlsx) validated against source manifest SHA-256.</span>
+            </div>
+            <div class="flow-node">
+              <b>2. Python Ingestion</b>
+              <span>Streaming batch loader (`ops.source_file`) with duplicate protection.</span>
+            </div>
+            <div class="flow-node">
+              <b>3. PostgreSQL Raw</b>
+              <span>Immutable `raw.online_retail_ii` preserves every row and sheet location.</span>
+            </div>
+            <div class="flow-node">
+              <b>4. Stg / Int / Mart / DW</b>
+              <span>PostgreSQL views &amp; materialized relations (`stg`, `int`, `mart`, `dw`).</span>
+            </div>
+            <div class="flow-node">
+              <b>5. Decision &amp; BI Views</b>
+              <span>Curated `bi.*` semantic views feeding Power BI PBIP and model evaluation.</span>
+            </div>
+          </div>
+          <div class="dbt-banner">
+            <strong>Architecture Boundary:</strong> PostgreSQL migrations and views own all transactional transformations.
+            <code>dbt</code> operates alongside PostgreSQL as an adapter to verify data contracts (schema tests, uniqueness, accepted values) and expose lineage, not as the transformation engine.
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Two Distinct Evidence Clusters -->
+      <section class="section">
+        <div class="section-head">
+          <h2>2. Audit Evidence &amp; Provenance</h2>
+          <p>Two distinct evidence clusters from recorded run logs and model evaluation artifacts. Kept separate by date and operational scope.</p>
+        </div>
+        <div class="grid two-col">
+          <!-- Cluster 1: Pipeline Orchestration Run -->
+          <article class="card evidence-card">
+            <span class="badge-tag tag-blue">Pipeline Orchestration Run</span>
+            <h3 style="margin: 0 0 4px; font-size: 1.15rem;">Run Record: 2026-11-10</h3>
+            <p style="margin: 0; color: var(--muted); font-size: 0.84rem;">Recorded in <code>last_run.json</code> (Run ID: <code>8c0fc3c3e9ca</code>).</p>
+            <ul class="audit-list">
+              <li>
+                <span class="audit-label">Execution Status</span>
+                <span class="audit-val" style="color: var(--teal);">SUCCEEDED (SKIPPED_ALREADY_LOADED)</span>
+              </li>
+              <li>
+                <span class="audit-label">Source vs Raw Rows</span>
+                <span class="audit-val">1,067,371 / 1,067,371 (exact match)</span>
+              </li>
+              <li>
+                <span class="audit-label">SQL Quality Gates</span>
+                <span class="audit-val">12 / 12 passed</span>
+              </li>
+              <li>
+                <span class="audit-label">dbt Build Status</span>
+                <span class="audit-val">All models & tests passed</span>
+              </li>
+              <li>
+                <span class="audit-label">Execution Time</span>
+                <span class="audit-val">17m 03s (end-to-end orchestration)</span>
+              </li>
+            </ul>
+            <p style="margin: 12px 0 0; font-size: 0.78rem; color: var(--muted);">
+              <em>Scope:</em> Evidence verifies this specific pipeline execution on 2026-11-10; it does not claim unconditional idempotency for future snapshot versions.
+            </p>
+          </article>
+
+          <!-- Cluster 2: Model Evaluation Artifact -->
+          <article class="card evidence-card model-cluster">
+            <span class="badge-tag tag-purple">Model Evaluation Artifact</span>
+            <h3 style="margin: 0 0 4px; font-size: 1.15rem;">Evaluation Artifact: 2026-11-11</h3>
+            <p style="margin: 0; color: var(--muted); font-size: 0.84rem;">Generated at 2026-11-11 16:04:25 (UTC+00:00) via <code>train_repurchase_model.py</code>.</p>
+            <ul class="audit-list">
+              <li>
+                <span class="audit-label">Target Snapshot</span>
+                <span class="audit-val">Snapshot 1 (SHA-256: <code>bcbe73b3...</code>)</span>
+              </li>
+              <li>
+                <span class="audit-label">Hash Manifest Reconciled</span>
+                <span class="audit-val" style="color: var(--teal);">Verified match with source manifest</span>
+              </li>
+              <li>
+                <span class="audit-label">Temporal Holdout Period</span>
+                <span class="audit-val">2011-09-11 &rarr; 2011-12-10 (end excl.)</span>
+              </li>
+              <li>
+                <span class="audit-label">Holdout Cohort Size</span>
+                <span class="audit-val">2,784 customers (1,722 repurchased)</span>
+              </li>
+              <li>
+                <span class="audit-label">Observation / Prediction Window</span>
+                <span class="audit-val">180 days obs. &rarr; 90 days pred.</span>
+              </li>
+            </ul>
+            <p style="margin: 12px 0 0; font-size: 0.78rem; color: var(--muted);">
+              <em>Scope:</em> Historical temporal backtest evaluating repurchase labels in the holdout window. Generated after pipeline run <code>8c0fc3c3e9ca</code>. Not an operational forecast for active customers.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- Section 3: Revenue & Cancellation Evidence -->
+      <section class="section">
+        <div class="section-head">
+          <h2>3. Revenue &amp; Cancellation Evidence</h2>
+          <p>Event-date revenue composition and heuristic cancellation diagnostic matching.</p>
+        </div>
+        <div class="grid two-col">
+          <article class="card">
+            <div class="chart-head"><b>Transaction Composition</b><span>USD, rounded</span></div>
+            <div class="waterfall">
+              <div class="bar-row">
+                <span>Gross sales</span>
+                <div class="track"><div class="fill fill-blue" style="width: 100%;"></div></div>
+                <span style="text-align: right; font-weight: 700;">$20.81m</span>
+              </div>
+              <div class="bar-row">
+                <span>Cancellations</span>
+                <div class="track"><div class="fill fill-rose" style="width: 7.3%;"></div></div>
+                <span style="text-align: right; font-weight: 700;">&minus;$1.53m</span>
+              </div>
+              <div class="bar-row">
+                <span>Net amount</span>
+                <div class="track"><div class="fill fill-teal" style="width: 92.7%;"></div></div>
+                <span style="text-align: right; font-weight: 700;">$19.29m</span>
+              </div>
+            </div>
+            <p style="margin: 14px 0 0; color: var(--muted); font-size: 0.83rem;">
+              Coverage: 824,364 rows carry Customer ID (77.2%); 243,007 guest rows remain in revenue rather than being discarded.
+            </p>
+            <div class="provenance-meta">
+              <b>Source:</b> <code>stg.online_retail_transaction</code> (1,067,371 rows)<br />
+              <b>Contract:</b> Missing customer IDs retained in revenue marts; excluded from customer marts (<code>docs/architecture/STAGING_TRANSACTION_MODEL.md</code>).
+            </div>
+          </article>
+          <!-- Right Card: Cancellation Evidence -->
+          <article class="card">
+            <div class="chart-head"><b>Cancellation Evidence</b><span>Diagnostic candidate matching</span></div>
+            <div class="donut-wrap">
+              <div class="donut" role="img" aria-label="25.2 percent matched candidate, 9.4 percent ambiguous, 65.4 percent unmatched">
+                <div class="donut-hole">
+                  <b>19,494</b>
+                  <span>cancellations</span>
+                </div>
+              </div>
+              <div class="legend">
+                <div class="legend-item"><span class="legend-name"><i class="dot" style="background: var(--teal);"></i>Matched candidate</span><b>4,907</b></div>
+                <div class="legend-item"><span class="legend-name"><i class="dot" style="background: var(--amber);"></i>Ambiguous</span><b>1,833</b></div>
+                <div class="legend-item"><span class="legend-name"><i class="dot" style="background: var(--rose);"></i>Unmatched</span><b>12,754</b></div>
+              </div>
+            </div>
+            <p style="margin: 14px 0 0; color: var(--muted); font-size: 0.81rem; line-height: 1.45;">
+              <em>Diagnostic only:</em> Candidate matching uses snapshot, customer, stock code, and quantity magnitude. It does not prove accounting returns or adjust revenue.
+            </p>
+            <div class="provenance-meta">
+              <b>Source:</b> <code>bi.cancellation_diagnostic</code> &bull; <code>int.cancellation_match_resolution</code> (19,494 cancellation rows)<br />
+              <b>Contract:</b> Heuristic candidate edge resolution (<code>docs/architecture/CANCELLATION_MATCH_CANDIDATES.md</code>).
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Section 4: Machine Learning & Decision Comparison -->
+      <section class="section">
+        <div class="section-head">
+          <h2>4. Model Evaluation &amp; Fixed-Capacity Ranking</h2>
+          <p>Evaluating repurchase prediction under two separate contracts: threshold-independent holdout classification and budget-constrained ranking.</p>
+        </div>
+
+        <!-- Global Holdout Classification Metrics -->
+        <div style="margin-bottom: 8px;">
+          <span style="font-size: 0.8rem; font-weight: 750; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">
+            Global Model Metrics &bull; Full Holdout (2,784 Customers &bull; Threshold-Independent)
+          </span>
+        </div>
+        <div class="grid metrics-4">
+          <article class="card">
+            <div class="metric-label">ROC-AUC (Holdout)</div>
+            <div class="metric-val" style="color: var(--blue);">0.7152</div>
+            <p class="metric-note">Overall ranking discriminatory power across all cutoffs.</p>
+          </article>
+          <article class="card">
+            <div class="metric-label">PR-AUC (Holdout)</div>
+            <div class="metric-val" style="color: var(--purple);">0.8162</div>
+            <p class="metric-note">Area under Precision-Recall curve across all probability thresholds.</p>
+          </article>
+          <article class="card">
+            <div class="metric-label">Lift @ Top 20%</div>
+            <div class="metric-val" style="color: var(--teal);">1.4629&times;</div>
+            <p class="metric-note">Precision lift over base rate (61.9%) at top 20% slice.</p>
+          </article>
+          <article class="card">
+            <div class="metric-label">Brier Score</div>
+            <div class="metric-val">0.2286</div>
+            <p class="metric-note">Mean squared probability calibration error (lower is better).</p>
+          </article>
+        </div>
+
+        <!-- Budget-Dependent Ranking Comparison Card -->
+        <article class="card" style="margin-top: 18px;">
+          <div class="chart-head" style="flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+            <div>
+              <b style="display: block; font-size: 1.05rem;">Fixed-Capacity Ranking Comparison &bull; Budget K: <span id="budget-label" style="color: var(--blue);">10% (K = 279 customers)</span></b>
+              <span style="font-size: 0.82rem; color: var(--muted);">Switch budget capacity slice K below to inspect ranking yield, recall, and lift.</span>
+            </div>
+            <!-- Discrete 10/20/30% Budget Buttons right above the table -->
+            <div class="btn-group" role="group" aria-label="Budget capacity selector">
+              <button class="btn-pill active" onclick="setBudget(0.10, this)">Budget K = 10%</button>
+              <button class="btn-pill" onclick="setBudget(0.20, this)">Budget K = 20%</button>
+              <button class="btn-pill" onclick="setBudget(0.30, this)">Budget K = 30%</button>
+            </div>
+          </div>
+
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Ranking Method</th>
+                <th>Definition / Order</th>
+                <th>Selected</th>
+                <th>Precision@K</th>
+                <th>Recall@K</th>
+                <th>Lift@K</th>
+                <th>Difference vs LR</th>
+                <th>95% Bootstrap CI</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Frequency Business</strong></td>
+                <td>Frequency DESC, monetary DESC, recency ASC, customer_id ASC</td>
+                <td id="fb-count">279</td>
+                <td id="fb-precision" style="font-weight: 700; color: var(--teal);">95.0%</td>
+                <td id="fb-recall">15.4%</td>
+                <td id="fb-lift">1.536×</td>
+                <td id="fb-diff">+0.000%</td>
+                <td id="fb-ci">[-0.151%, +0.151%] (includes 0)</td>
+              </tr>
+              <tr>
+                <td><strong>Logistic Regression v1</strong></td>
+                <td>Predicted repurchase probability DESC, customer_id ASC</td>
+                <td id="lr-count">279</td>
+                <td id="lr-precision" style="font-weight: 700; color: var(--blue);">95.0%</td>
+                <td id="lr-recall">15.4%</td>
+                <td id="lr-lift">1.536×</td>
+                <td>Reference baseline</td>
+                <td>Reference baseline</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="callout">
+            <strong>Statistical Finding:</strong> On this holdout, observed <code>Precision@K</code> between Frequency Business and Logistic Regression is quite close.
+            The paired customer bootstrap 95% confidence interval (2,000 replicates) <strong>contains 0 across all three budget levels (10%, 20%, 30%)</strong>, meaning a difference in precision between the two methods is not proven.
+            Importantly, containing 0 also does not prove that the two methods are equivalent.
+          </div>
+        </article>
+      </section>
+
+      <!-- Section 5: Engineering Trade-offs & Limitations -->
+      <section class="section">
+        <div class="section-head">
+          <h2>5. Decision Trade-offs &amp; Analytical Governance</h2>
+          <p>Pragmatic evaluation rationale and critical data contract boundaries.</p>
+        </div>
+        <div class="grid two-col">
+          <article class="card">
+            <h3 style="margin: 0 0 8px; font-size: 1.05rem;">Operational Decision Rationale</h3>
+            <p style="margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.55;">
+              <code>Frequency Business</code> was selected as the simpler candidate for operational evaluation due to its intuitive ranking structure, transparency for business stakeholders, and zero model maintenance or inference latency overhead.
+              On this holdout, its average Precision@K was slightly higher than Logistic Regression (+0.54% at K=20%), but the confidence interval did not establish superiority.
+              This is a pragmatic operational choice based on available evidence, not a conclusion that heuristic rules always outperform machine learning.
+            </p>
+          </article>
+          <article class="card">
+            <h3 style="margin: 0 0 8px; font-size: 1.05rem;">Data &amp; Label Boundaries</h3>
+            <p style="margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.55;">
+              The target label captures <strong>natural repurchase events observed in historical data within the 90-day window</strong> following the prediction cutoff.
+              Because the dataset does not record active marketing interventions, randomized controlled trials (RCTs), or intervention costs,
+              <strong>these metrics do not represent marketing campaign response, causal uplift, or business return on investment (ROI)</strong>.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- Section 6: Deep-Dive Analytics Link -->
+      <section class="section">
+        <div class="lineage-card" style="border-left: 4px solid var(--purple);">
+          <h3 style="margin: 0 0 6px; font-size: 1.1rem;">Detailed Multi-Dimensional Analysis</h3>
+          <p style="margin: 0 0 12px; color: var(--muted); font-size: 0.88rem;">
+            For interactive multi-dimensional exploration, refer to the governed Power BI PBIP project in <code>powerbi/</code>:
+          </p>
+          <ul style="margin: 0 0 12px 18px; padding: 0; font-size: 0.86rem; color: var(--ink); line-height: 1.6;">
+            <li><strong>Page 1 (retailpulse_overview):</strong> Event-date sales, net transactions, customer event frequency.</li>
+            <li><strong>Page 2 (retailpulse_customer):</strong> RFM distributions, dense cohort retention, and illustrative budget allocations.</li>
+            <li><strong>Page 3 (retailpulse_quality):</strong> Missing Customer ID trends, cancellation candidate matching, and snapshot audit table.</li>
+            <li><strong>Page 4 (retailpulse_model_evaluation):</strong> In-depth model evaluation comparing <code>frequency_gte_2_baseline</code>, <code>logistic_regression</code>, and <code>log1p_sensitivity</code>.</li>
+          </ul>
+          <p style="margin: 0; font-size: 0.82rem; color: var(--muted);">
+            <em>Distinction between evaluation contracts:</em> This web brief compares <code>Frequency Business</code> vs <code>Logistic Regression</code> under the fixed-capacity ranking contract (Precision@K). The Power BI report evaluates the binary classification contract using <code>frequency_gte_2_baseline</code> (a simple rule predicting repurchase if prior frequency &ge; 2) alongside Logistic Regression with standard classification metrics (Precision, Recall, ROC-AUC, PR-AUC, Brier score).
+          </p>
+        </div>
+      </section>
+
       <footer class="footer">
-        Notice: This static HTML file is an illustrative demonstration containing hardcoded historical metrics from a 2026-10-29 run. It is not an active data feed and must not be interpreted as an audited accounting statement, return reconciliation, or live verified status. For governed analytical reporting, refer to the verified Power BI PBIP project in powerbi/.
+        RetailPulse Portfolio Architecture &amp; Analytical Brief &bull;
+        Frozen static snapshot derived from pipeline run <code>8c0fc3c3e9ca</code> (2026-11-10) and model evaluation artifact (2026-11-11) &bull;
+        Evaluated on Online Retail II Source Snapshot 1 &bull;
+        Data pipelines orchestrated via PostgreSQL &amp; Python.
       </footer>
     </main>
+
+    <!-- Lightweight interaction for the 3 discrete budget levels -->
+    <script>
+      const budgetData = {
+      "0.1": {
+            "label": "10% (K = 279 customers)",
+            "fbCount": "279",
+            "fbPrecision": "95.0%",
+            "fbRecall": "15.4%",
+            "fbLift": "1.536\u00d7",
+            "fbDiff": "+0.000%",
+            "fbCi": "[-0.151%, +0.151%] (includes 0)",
+            "lrCount": "279",
+            "lrPrecision": "95.0%",
+            "lrRecall": "15.4%",
+            "lrLift": "1.536\u00d7"
+      },
+      "0.2": {
+            "label": "20% (K = 557 customers)",
+            "fbCount": "557",
+            "fbPrecision": "91.0%",
+            "fbRecall": "29.4%",
+            "fbLift": "1.472\u00d7",
+            "fbDiff": "+0.539%",
+            "fbCi": "[-1.015%, +2.000%] (includes 0)",
+            "lrCount": "557",
+            "lrPrecision": "90.5%",
+            "lrRecall": "29.3%",
+            "lrLift": "1.463\u00d7"
+      },
+      "0.3": {
+            "label": "30% (K = 836 customers)",
+            "fbCount": "836",
+            "fbPrecision": "86.1%",
+            "fbRecall": "41.8%",
+            "fbLift": "1.392\u00d7",
+            "fbDiff": "+0.598%",
+            "fbCi": "[-0.578%, +1.784%] (includes 0)",
+            "lrCount": "836",
+            "lrPrecision": "85.5%",
+            "lrRecall": "41.5%",
+            "lrLift": "1.383\u00d7"
+      }
+};
+
+      function setBudget(fraction, btn) {
+        document.querySelectorAll('.btn-pill').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+
+        const d = budgetData[fraction];
+        if (!d) return;
+        document.getElementById('budget-label').textContent = d.label;
+        document.getElementById('fb-count').textContent = d.fbCount;
+        document.getElementById('fb-precision').textContent = d.fbPrecision;
+        document.getElementById('fb-recall').textContent = d.fbRecall;
+        document.getElementById('fb-lift').textContent = d.fbLift;
+        document.getElementById('fb-diff').textContent = d.fbDiff;
+        document.getElementById('fb-ci').textContent = d.fbCi;
+        document.getElementById('lr-count').textContent = d.lrCount;
+        document.getElementById('lr-precision').textContent = d.lrPrecision;
+        document.getElementById('lr-recall').textContent = d.lrRecall;
+        document.getElementById('lr-lift').textContent = d.lrLift;
+      }
+    </script>
   </body>
 </html>

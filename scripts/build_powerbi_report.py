@@ -47,6 +47,7 @@ def visual(
     show_data_labels: bool = False,
     card_color: str | None = None,
     sort_by: dict | None = None,
+    hide_totals: bool = False,
 ) -> dict:
     query_state = {
         role: {
@@ -110,6 +111,10 @@ def visual(
                 }
             }
         ]
+    if hide_totals:
+        visual_objects["total"] = [
+            {"properties": {"show": {"expr": {"Literal": {"Value": "false"}}}}}
+        ]
 
     query_payload: dict = {"queryState": query_state}
     if sort_by is not None:
@@ -146,7 +151,7 @@ def snapshot_slicer(name: str) -> dict:
     )
 
 
-def page(name: str, display_name: str) -> None:
+def page(name: str, display_name: str, *, height: int = 1080) -> None:
     write(
         ROOT / "pages" / name / "page.json",
         {
@@ -154,7 +159,7 @@ def page(name: str, display_name: str) -> None:
             "name": name,
             "displayName": display_name,
             "displayOption": "FitToPage",
-            "height": 1080,
+            "height": height,
             "width": 1920,
         },
     )
@@ -164,17 +169,29 @@ def add(page_name: str, payload: dict) -> None:
     write(ROOT / "pages" / page_name / "visuals" / payload["name"] / "visual.json", payload)
 
 
+def remove_visual(page_name: str, visual_name: str) -> None:
+    """Remove a generated visual that was intentionally moved to another page."""
+
+    path = ROOT / "pages" / page_name / "visuals" / visual_name / "visual.json"
+    if path.exists():
+        path.unlink()
+        path.parent.rmdir()
+
+
 def build() -> None:
     overview = "retailpulse_overview"
     customer = "retailpulse_customer"
     quality = "retailpulse_quality"
+    model_evaluation = "retailpulse_model_evaluation"
     page(overview, "01 Overview")
     page(customer, "02 Customer lifecycle")
     page(quality, "03 Data quality & diagnostics")
+    page(model_evaluation, "04 Repurchase model evaluation", height=900)
 
     add(overview, snapshot_slicer("source_snapshot_slicer"))
     add(customer, snapshot_slicer("source_snapshot_slicer"))
     add(quality, snapshot_slicer("source_snapshot_slicer"))
+    add(model_evaluation, snapshot_slicer("source_snapshot_slicer"))
 
     # -------------------------------------------------------------------------
     # Page 1: Overview
@@ -558,28 +575,121 @@ def build() -> None:
             subtitle="Immutable source manifest verified before analytical publication",
         ),
     )
+    remove_visual(quality, "model_comparison")
+
+    # -------------------------------------------------------------------------
+    # Page 4: Repurchase model evaluation
+    # -------------------------------------------------------------------------
+    # This page shows only persisted historical backtest metrics. It does not
+    # rank current customers or imply a campaign-response or ROI prediction.
+    remove_visual(model_evaluation, "provenance")
     model_eval = "bi repurchase_model_evaluation"
     add(
-        quality,
+        model_evaluation,
+        visual(
+            "evaluation_snapshot",
+            "card",
+            (40, 36, 352, 134),
+            "Evaluation snapshot",
+            {"Values": [("Snapshot ID", measure(model_eval, "Evaluation snapshot ID"))]},
+            subtitle="Choose one source snapshot",
+            card_color="#1F2937",
+        ),
+    )
+    add(
+        model_evaluation,
+        visual(
+            "evaluation_holdout_size",
+            "card",
+            (412, 36, 352, 134),
+            "Holdout customers",
+            {"Values": [("Holdout customers", measure(model_eval, "Holdout customer count"))]},
+            subtitle="180-day observation / 90-day prediction",
+            card_color="#1F2937",
+        ),
+    )
+    add(
+        model_evaluation,
+        visual(
+            "evaluation_date",
+            "card",
+            (784, 36, 352, 134),
+            "Evaluated on",
+            {"Values": [("Evaluation date", measure(model_eval, "Evaluation date"))]},
+            subtitle="Persisted backtest run date",
+            card_color="#1F2937",
+        ),
+    )
+    add(
+        model_evaluation,
+        visual(
+            "evaluation_method_coverage",
+            "card",
+            (1156, 36, 352, 134),
+            "Methods persisted",
+            {"Values": [("Method coverage", measure(model_eval, "Evaluation method coverage"))]},
+            subtitle="Expected: 3 persisted methods",
+            card_color="#B45309",
+        ),
+    )
+    for name, title, measure_name, color, x in [
+        ("logistic_roc_auc", "Logistic Regression ROC-AUC", "Logistic Regression ROC-AUC", "#4F46E5", 40),
+        ("logistic_pr_auc", "Logistic Regression PR-AUC", "Logistic Regression PR-AUC", "#0D9488", 505),
+        ("logistic_lift_top_20", "Logistic Regression Lift @ top 20%", "Logistic Regression Lift at top 20%", "#0284C7", 970),
+        ("logistic_brier_score", "Logistic Regression Brier score", "Logistic Regression Brier score", "#B45309", 1435),
+    ]:
+        add(
+            model_evaluation,
+            visual(
+                name,
+                "card",
+                (x, 190, 425, 150),
+                title,
+                {"Values": [(title, measure(model_eval, measure_name))]},
+                subtitle="Persisted historical holdout metric",
+                card_color=color,
+            ),
+        )
+    add(
+        model_evaluation,
         visual(
             "model_comparison",
             "tableEx",
-            (40, 850, 1840, 180),
-            "Model vs rule baseline (holdout)",
+            (40, 370, 1140, 440),
+            "Holdout comparison: model and simple rule baseline",
             {
                 "Values": [
-                    ("Evaluation", field(model_eval, "model_name")),
-                    ("Threshold", field(model_eval, "decision_threshold", aggregate=0)),
-                    ("Cohort", field(model_eval, "customer_count", aggregate=0)),
-                    ("Precision", field(model_eval, "precision_at_threshold", aggregate=0)),
-                    ("Recall", field(model_eval, "recall_at_threshold", aggregate=0)),
-                    ("PR-AUC", field(model_eval, "pr_auc", aggregate=0)),
-                    ("ROC-AUC", field(model_eval, "roc_auc", aggregate=0)),
-                    ("Lift @ top 20%", field(model_eval, "lift_at_top_20_percent", aggregate=0)),
-                    ("Brier", field(model_eval, "brier_score", aggregate=0)),
+                    ("Method", field(model_eval, "model_display_name")),
+                    ("Decision threshold", measure(model_eval, "Comparison decision threshold")),
+                    ("Holdout customers", measure(model_eval, "Comparison holdout customers")),
+                    ("Precision @ threshold", measure(model_eval, "Comparison precision at threshold")),
+                    ("Recall @ threshold", measure(model_eval, "Comparison recall at threshold")),
+                    ("PR-AUC", measure(model_eval, "Comparison PR-AUC")),
+                    ("ROC-AUC", measure(model_eval, "Comparison ROC-AUC")),
+                    ("Lift @ top 20%", measure(model_eval, "Comparison Lift at top 20%")),
+                    ("Brier score", measure(model_eval, "Comparison Brier score")),
                 ]
             },
-            subtitle="Historical temporal backtest; not campaign response, uplift, or ROI",
+            subtitle="Logistic Regression vs log1p sensitivity vs Frequency Business (frequency >= 2); one temporal holdout, not a claim of campaign uplift or ROI",
+            hide_totals=True,
+        ),
+    )
+    add(
+        model_evaluation,
+        visual(
+            "threshold_tradeoff",
+            "clusteredBarChart",
+            (1210, 370, 670, 440),
+            "Precision and recall at threshold 0.5",
+            {
+                "Category": [("Method", field(model_eval, "model_display_name"))],
+                "Y": [
+                    ("Precision", measure(model_eval, "Evaluation Precision at threshold")),
+                    ("Recall", measure(model_eval, "Evaluation Recall at threshold")),
+                ],
+            },
+            subtitle="Higher precision trades off against missed repurchases; one historical holdout",
+            show_data_labels=True,
         ),
     )
 
@@ -587,7 +697,7 @@ def build() -> None:
         ROOT / "pages" / "pages.json",
         {
             "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/pagesMetadata/1.1.0/schema.json",
-            "pageOrder": [overview, customer, quality],
+            "pageOrder": [overview, customer, quality, model_evaluation],
             "activePageName": overview,
         },
     )

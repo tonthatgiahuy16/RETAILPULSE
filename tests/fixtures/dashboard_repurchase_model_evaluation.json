@@ -1,0 +1,45 @@
+{
+  "generated_at_utc": "2026-11-11T16:04:25+00:00",
+  "source_file_id": 1,
+  "source_sha256": "fixture-source-sha256-not-a-production-secret",
+  "model_configuration": {
+    "notes": "Public CI fixture for static dashboard compilation."
+  },
+  "temporal_contract": {
+    "holdout_prediction_start_date": "2011-09-11",
+    "holdout_prediction_end_date": "2011-12-10"
+  },
+  "holdout_evaluation": {
+    "logistic_regression": {
+      "roc_auc": 0.7152,
+      "pr_auc": 0.8162,
+      "lift_at_top_20_percent": 1.4629,
+      "brier_score": 0.2286,
+      "customer_count": 2784,
+      "positive_customer_count": 1722
+    }
+  },
+  "decision_comparison": {
+    "frequency_business": {
+      "metrics": [
+        {"budget_fraction": 0.1, "selected_customer_count": 279, "precision_at_k": 0.95, "recall_at_k": 0.2, "lift_at_k": 1.45},
+        {"budget_fraction": 0.2, "selected_customer_count": 557, "precision_at_k": 0.91, "recall_at_k": 0.4, "lift_at_k": 1.4},
+        {"budget_fraction": 0.3, "selected_customer_count": 836, "precision_at_k": 0.861, "recall_at_k": 0.6, "lift_at_k": 1.35}
+      ]
+    },
+    "logistic_regression": {
+      "metrics": [
+        {"budget_fraction": 0.1, "selected_customer_count": 279, "precision_at_k": 0.95, "recall_at_k": 0.19, "lift_at_k": 1.45},
+        {"budget_fraction": 0.2, "selected_customer_count": 557, "precision_at_k": 0.905, "recall_at_k": 0.39, "lift_at_k": 1.39},
+        {"budget_fraction": 0.3, "selected_customer_count": 836, "precision_at_k": 0.855, "recall_at_k": 0.59, "lift_at_k": 1.34}
+      ]
+    },
+    "recommendation": {
+      "precision_bootstrap_vs_logistic_regression": [
+        {"budget_fraction": 0.1, "ci_lower": -0.01, "ci_upper": 0.01, "ci_includes_zero": true},
+        {"budget_fraction": 0.2, "ci_lower": -0.01, "ci_upper": 0.01, "ci_includes_zero": true},
+        {"budget_fraction": 0.3, "ci_lower": -0.01, "ci_upper": 0.01, "ci_includes_zero": true}
+      ]
+    }
+  }
+}

@@ -216,14 +216,98 @@ class PowerBiProjectValidationTests(unittest.TestCase):
             / "RetailPulse.Report"
             / "definition"
             / "pages"
-            / "retailpulse_quality"
+            / "retailpulse_model_evaluation"
             / "visuals"
             / "model_comparison"
             / "visual.json"
         )
         payload = json.loads(table.read_text(encoding="utf-8"))
         self.assertIn("bi repurchase_model_evaluation", json.dumps(payload))
-        self.assertIn("lift_at_top_20_percent", json.dumps(payload))
+        self.assertIn("Comparison Lift at top 20%", json.dumps(payload))
+        self.assertIn("model_display_name", json.dumps(payload))
+        self.assertIn("Comparison precision at threshold", json.dumps(payload))
+        self.assertIn("Comparison Brier score", json.dumps(payload))
+        self.assertEqual(
+            payload["visual"]["objects"]["total"][0]["properties"]["show"]["expr"]["Literal"]["Value"],
+            "false",
+        )
+
+    def test_model_evaluation_page_only_allows_snapshot_slicer(self) -> None:
+        self.assertEqual(VALIDATOR.validate_project(self.root), [])
+        page = self.root / "RetailPulse.Report" / "definition" / "pages" / "retailpulse_model_evaluation"
+        slicer = page / "visuals" / "cohort_slicer" / "visual.json"
+        slicer.parent.mkdir()
+        slicer.write_text(
+            json.dumps({"visual": {"visualType": "slicer"}}), encoding="utf-8"
+        )
+        errors = VALIDATOR.validate_project(self.root)
+        self.assertIn(
+            "retailpulse_model_evaluation: only the source snapshot slicer is allowed, found ['cohort_slicer', 'source_snapshot_slicer']",
+            errors,
+        )
+
+    def test_model_evaluation_page_keeps_provenance_and_metric_cards(self) -> None:
+        self.assertEqual(VALIDATOR.validate_project(self.root), [])
+        page = self.root / "RetailPulse.Report" / "definition" / "pages" / "retailpulse_model_evaluation"
+        page_payload = json.loads((page / "page.json").read_text(encoding="utf-8"))
+        self.assertEqual(page_payload["displayName"], "04 Repurchase model evaluation")
+        self.assertEqual(page_payload["height"], 900)
+        for visual_name in {
+            "evaluation_snapshot",
+            "evaluation_holdout_size",
+            "evaluation_date",
+            "evaluation_method_coverage",
+            "logistic_roc_auc",
+            "logistic_pr_auc",
+            "logistic_lift_top_20",
+            "logistic_brier_score",
+        }:
+            self.assertTrue((page / "visuals" / visual_name / "visual.json").exists())
+        self.assertTrue((page / "visuals" / "threshold_tradeoff" / "visual.json").exists())
+
+    def test_model_metric_measure_requires_one_snapshot(self) -> None:
+        path = self.tables_dir() / "bi repurchase_model_evaluation.tmdl"
+        text = path.read_text(encoding="utf-8")
+        stripped = text.replace(
+            "HASONEVALUE ( 'bi repurchase_model_evaluation'[source_file_id] )",
+            "TRUE ()",
+            1,
+        )
+        path.write_text(stripped, encoding="utf-8")
+        errors = VALIDATOR.validate_project(self.root)
+        self.assertIn(
+            "bi repurchase_model_evaluation: Logistic Regression ROC-AUC must blank outside one selected snapshot",
+            errors,
+        )
+
+    def test_model_metric_measure_uses_persisted_logistic_row_name(self) -> None:
+        path = self.tables_dir() / "bi repurchase_model_evaluation.tmdl"
+        text = path.read_text(encoding="utf-8")
+        path.write_text(
+            text.replace('model_name] = "logistic_regression_v1"', 'model_name] = "logistic_regression"', 1),
+            encoding="utf-8",
+        )
+        errors = VALIDATOR.validate_project(self.root)
+        self.assertIn(
+            "bi repurchase_model_evaluation: Logistic Regression ROC-AUC must filter the persisted logistic_regression_v1 row",
+            errors,
+        )
+
+    def test_comparison_measures_blank_on_total_row(self) -> None:
+        path = self.tables_dir() / "bi repurchase_model_evaluation.tmdl"
+        text = path.read_text(encoding="utf-8")
+        measure_start = text.index("\tmeasure 'Comparison precision at threshold' =")
+        measure_end = text.index("\n\tmeasure ", measure_start + 1)
+        measure = text[measure_start:measure_end]
+        self.assertIn("ISINSCOPE", measure)
+        path.write_text(text[:measure_start] + measure.replace(
+            "\n\t\t\t\t\t&& ISINSCOPE ( 'bi repurchase_model_evaluation'[model_display_name] )", ""
+        ) + text[measure_end:], encoding="utf-8")
+        errors = VALIDATOR.validate_project(self.root)
+        self.assertIn(
+            "bi repurchase_model_evaluation: Comparison precision at threshold must blank on the comparison total row",
+            errors,
+        )
 
     def tables_dir(self) -> Path:
         return self.root / "RetailPulse.SemanticModel" / "definition" / "tables"
