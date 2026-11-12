@@ -58,8 +58,9 @@ refresh by itself.
   report with Overview, Customer lifecycle, Data quality, and historical model
   evaluation pages.
 - A temporal holdout decision report comparing RFM, frequency ranking, and
-  Logistic Regression at fixed contact capacities, including calibration and
-  frequency tie-break diagnostics. See
+  Logistic Regression at fixed contact capacities, including calibration,
+  frequency tie-break diagnostics, and a multi-holdout stability comparison with
+  per-block bootstrap intervals. See
   [`docs/decision/RETENTION_PRIORITY_DECISION.md`](docs/decision/RETENTION_PRIORITY_DECISION.md).
 - Architecture, data-contract, KPI, and source-attribution documentation under
   [`docs/`](docs/).

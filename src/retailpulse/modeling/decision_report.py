@@ -19,6 +19,14 @@ def _quantile(values: list[float], fraction: float) -> float:
     return ordered[lower] + (ordered[upper] - ordered[lower]) * (position - lower)
 
 
+def percentile(values: Sequence[float], fraction: float) -> float:
+    """Return the linearly interpolated percentile used by the SQL contracts."""
+
+    if not values:
+        raise ValueError("Cannot calculate a percentile from empty values")
+    return _quantile([float(value) for value in values], fraction)
+
+
 def distribution_summary(values: Sequence[float]) -> dict[str, float | int]:
     """Summarize feature scale, tail and moment skewness without extra deps."""
 
@@ -101,7 +109,7 @@ def evaluate_ranking(
 def _percentile(values: Sequence[float], fraction: float) -> float:
     if not values:
         raise ValueError("Cannot calculate a percentile from empty values")
-    return _quantile([float(value) for value in values], fraction)
+    return percentile(values, fraction)
 
 
 def _selected_customer_ids(
