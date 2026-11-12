@@ -1,45 +1,91 @@
 -- Integration gate for migration 020. BI views must remain thin, snapshot-aware
 -- projections of their published contracts rather than competing calculations.
--- Every comparison below is symmetric (both EXCEPT directions) so a dropped,
--- duplicated, or altered value fails the gate in either relation.
+-- The daily comparison uses a symmetric full join (both sides NULL-checked) and
+-- an explicit key-uniqueness check, because a full join alone cannot detect a
+-- key duplicated identically on both sides. The remaining comparisons use EXCEPT
+-- in both directions. In every case a dropped, duplicated, or altered value
+-- fails the gate in either relation.
 
 do $$
-declare failures bigint;
+declare
+    failures bigint;
+    derived_failures bigint;
+    bi_duplicate_keys bigint;
+    mart_duplicate_keys bigint;
 begin
-    select count(*) into failures
-    from (
-        (select source_file_id, source_sha256, event_date, gross_sales_amount,
-                cancellation_signed_amount, net_transaction_amount,
-                transaction_row_count, missing_customer_id_row_count
-         from bi.sales_daily
-         except
-         select source_file_id, source_sha256, event_date, gross_sales_amount,
-                cancellation_signed_amount, net_transaction_amount,
-                transaction_row_count, missing_customer_id_row_count
-         from mart.revenue_daily)
-        union all
-        (select source_file_id, source_sha256, event_date, gross_sales_amount,
-                cancellation_signed_amount, net_transaction_amount,
-                transaction_row_count, missing_customer_id_row_count
-         from mart.revenue_daily
-         except
-         select source_file_id, source_sha256, event_date, gross_sales_amount,
-                cancellation_signed_amount, net_transaction_amount,
-                transaction_row_count, missing_customer_id_row_count
-         from bi.sales_daily)
-    ) as mismatched_revenue;
+    -- Materialize each daily contract once so the full comparison and the
+    -- derived-column check do not rescan the underlying staging relations.
+    -- Keys are non-null in both contracts; a future null key surfaces as an
+    -- unmatched row below instead of being silently equal.
+    with bi_daily as materialized (
+        select * from bi.sales_daily
+    ), mart_daily as materialized (
+        select * from mart.revenue_daily
+    ), mismatched_daily as (
+        select bi.source_file_id
+        from bi_daily as bi
+        full join mart_daily as mart
+            on mart.source_file_id = bi.source_file_id
+           and mart.source_sha256 = bi.source_sha256
+           and mart.event_date = bi.event_date
+        where bi.source_file_id is null
+           or mart.source_file_id is null
+           or bi.gross_sales_amount is distinct from mart.gross_sales_amount
+           or bi.cancellation_signed_amount is distinct from mart.cancellation_signed_amount
+           or bi.net_transaction_amount is distinct from mart.net_transaction_amount
+           or bi.transaction_row_count is distinct from mart.transaction_row_count
+           or bi.missing_customer_id_row_count is distinct from mart.missing_customer_id_row_count
+    )
+    select
+        (select count(*) from mismatched_daily)
+        + case
+              when (select count(*) from bi_daily)
+                   <> (select count(*) from mart_daily)
+              then 1
+              else 0
+          end,
+        (
+            select count(*)
+            from bi_daily
+            where missing_customer_id_share is distinct from
+                      missing_customer_id_row_count::numeric / nullif(transaction_row_count, 0)
+               or revenue_interpretation <> 'EVENT_DATE_TRANSACTION_AMOUNT_NOT_ACCOUNTING_REVENUE'
+               or cancellation_interpretation <> 'CANCELLATION_CANDIDATES_ARE_NOT_CONFIRMED_RETURNS'
+        ),
+        (
+            select count(*)
+            from (
+                select 1
+                from bi_daily
+                group by source_file_id, source_sha256, event_date
+                having count(*) > 1
+            ) as duplicated_bi_keys
+        ),
+        (
+            select count(*)
+            from (
+                select 1
+                from mart_daily
+                group by source_file_id, source_sha256, event_date
+                having count(*) > 1
+            ) as duplicated_mart_keys
+        )
+    into failures, derived_failures, bi_duplicate_keys, mart_duplicate_keys;
+
+    if bi_duplicate_keys <> 0 then
+        raise exception 'bi.sales_daily has % duplicated daily keys', bi_duplicate_keys;
+    end if;
+
+    if mart_duplicate_keys <> 0 then
+        raise exception 'mart.revenue_daily has % duplicated daily keys', mart_duplicate_keys;
+    end if;
+
     if failures <> 0 then
         raise exception 'bi.sales_daily differs from mart.revenue_daily in % column-comparison rows', failures;
     end if;
 
-    select count(*) into failures
-    from bi.sales_daily
-    where missing_customer_id_share is distinct from
-              missing_customer_id_row_count::numeric / nullif(transaction_row_count, 0)
-       or revenue_interpretation <> 'EVENT_DATE_TRANSACTION_AMOUNT_NOT_ACCOUNTING_REVENUE'
-       or cancellation_interpretation <> 'CANCELLATION_CANDIDATES_ARE_NOT_CONFIRMED_RETURNS';
-    if failures <> 0 then
-        raise exception 'bi.sales_daily has % rows with an inconsistent derived column or interpretation label', failures;
+    if derived_failures <> 0 then
+        raise exception 'bi.sales_daily has % rows with an inconsistent derived column or interpretation label', derived_failures;
     end if;
 
     select count(*) into failures
