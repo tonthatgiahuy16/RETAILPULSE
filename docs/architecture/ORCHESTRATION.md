@@ -99,6 +99,27 @@ Verifying evidence is not a refresh. The run record keeps that distinction in
 ```
 
 The same JSON is printed to stdout. CI uploads its run record as an artifact.
+`sql_gates.detail.timings` records one `{name, elapsed_seconds}` entry per SQL
+gate, and `ingest.detail.materialized_view_timings` records one per refreshed
+view. These detail fields are what make latency attribution possible.
+
+## Run history and latency summaries
+
+Every normal run also appends one compact JSON line to
+`data/processed/orchestration/run_history.jsonl` (local and gitignored). Each
+line records the run total, per-task status and elapsed time, the slowest tasks,
+and the slowest SQL gates and materialized views. Use
+`--history-output` to redirect it and `--no-history` to disable it.
+
+```powershell
+python scripts/report_pipeline_runs.py --last 10
+python scripts/report_pipeline_runs.py --last 10 --json
+```
+
+The report prints per-task median, max and latest elapsed seconds plus the
+slowest gates and views from the latest run. It reads only the JSONL history; it
+does not query PostgreSQL. With fewer than two runs the medians equal the single
+observed value, so do not over-interpret them.
 
 ## Latency and materialized-view refresh
 
@@ -114,13 +135,67 @@ The same JSON is printed to stdout. CI uploads its run record as an artifact.
   remain stale. The refresh is transactional, so canceling leaves the previous
   view contents in place.
 
+### Local latency baseline
+
+A single local measurement on 2026-11-12 (source snapshot `1`, 13 SQL gates,
+run through `run_sql_checks` with per-gate timings) took `1073.9s`. The slowest
+gates were `020_powerbi_semantic_layer.sql` (`347.4s`),
+`mart_revenue_daily.sql` (`238.0s`),
+`staging_transaction_classification.sql` (`196.8s`), and
+`022_revenue_adjustment_contract.sql` (`137.8s`). All 13 gates are read-only
+reconciliation checks, so the cost is full-table scanning, not writes.
+
+This is one local observation, not a benchmark or CI evidence. The gate set and
+database state differ from the earlier 2026-11-10 run, which had 12 gates and
+took `549.7s`; do not compare the totals as if only code changed. Use
+`report_pipeline_runs.py` after several runs before choosing an optimization.
+
+### Measured optimization (2026-11-12)
+
+Two gates were rewritten without changing their assertions:
+
+- `020_powerbi_semantic_layer.sql`: the daily comparison now materializes
+  `bi.sales_daily` and `mart.revenue_daily` once and compares them with a
+  symmetric full join, instead of scanning both relations in both EXCEPT
+  directions. A row-count equality check plus an explicit duplicate-key check on
+  both sides keeps the comparison equivalent when a key is duplicated, including
+  the case where both contracts duplicate the same key identically.
+- `staging_transaction_classification.sql`: raw coverage uses one windowed scan
+  of `raw.online_retail_line`, and the class/quarantine/match-status checks share
+  one scan of `stg.online_retail_transaction`.
+
+Both gates passed before and after. On the same local database and gate set as
+the baseline above:
+
+| Gate | Before | After | Change |
+|---|---:|---:|---:|
+| `020_powerbi_semantic_layer.sql` | 347.4s | 147.5-191.6s | -45% to -58% |
+| `staging_transaction_classification.sql` | 196.8s | 74.5-76.2s | -61% to -62% |
+| All 13 gates | 1073.9s | 765.8-887.4s | -17% to -29% |
+
+The ranges are separate local runs, not a single before/after pair. One run
+exceeded a 1500s timeout while an orphaned session held the mart gate; after
+terminating that backend, the full set completed in 887.4s. Treat the slower end
+as machine/IO variance rather than a code regression.
+
+A single-scan rewrite of `022_revenue_adjustment_contract.sql` was tried and
+reverted: it measured `141.3s` against the `137.8s` baseline, so it added
+complexity without a measurable gain. `mart_revenue_daily.sql` (`~240-267s`) was
+not optimized; it still needs one scan to derive expected rows and one to read
+the mart view, so it remains the largest single gate.
+
+Timings vary between runs on this machine (for example `020` measured 147-192s
+across runs, `022` 130-184s), so treat the percentages as directional and compare
+medians from several runs before claiming a stable improvement. These are
+single-run local observations, not CI evidence.
+
 ## Scheduling and limits
 
 - For recurring runs, schedule `python scripts/run_dag.py` (it runs once by
   default) from Task Scheduler or cron. `--interval-seconds` with `--max-runs`
   is available for a short local loop, not for production scheduling.
-- One process, one host: there is no worker pool, queue, distributed lock
-  beyond the migration advisory lock, run-history table, or SLA/alerting
-  integration beyond the webhook.
+- One process, one host: there is no worker pool, queue, or distributed lock
+  beyond the migration advisory lock. Run history is a local JSONL file, not a
+  shared database table, and alerting is limited to the optional webhook.
 - The runner does not schedule itself, retry across process restarts, or
   refresh Power BI.

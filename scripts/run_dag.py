@@ -13,10 +13,12 @@ from pathlib import Path
 
 from retailpulse.orchestration import PipelineConfig, build_dag, validate_config
 from retailpulse.orchestration.dag import RunRecord, TaskContext
+from retailpulse.orchestration.observability import append_history
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = Path("data/processed/orchestration/last_run.json")
+DEFAULT_HISTORY = Path("data/processed/orchestration/run_history.jsonl")
 
 
 def parse_timezone_aware_timestamp(value: str) -> datetime:
@@ -53,6 +55,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--interval-seconds", type=float)
     parser.add_argument("--max-runs", type=int, default=1)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--history-output",
+        type=Path,
+        default=DEFAULT_HISTORY,
+        help="append-only JSONL run history (default: data/processed/orchestration/run_history.jsonl)",
+    )
+    parser.add_argument(
+        "--no-history",
+        action="store_true",
+        help="do not append this run to the run-history file",
+    )
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args(argv)
 
@@ -78,8 +91,12 @@ def build_config(args: argparse.Namespace) -> PipelineConfig:
     )
 
 
+def resolve_path(path: Path) -> Path:
+    return path if path.is_absolute() else PROJECT_ROOT / path
+
+
 def write_record(record: RunRecord, output: Path) -> Path:
-    target = output if output.is_absolute() else PROJECT_ROOT / output
+    target = resolve_path(output)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
         json.dumps(record.to_dict(), indent=2, ensure_ascii=False, default=str) + "\n",
@@ -158,10 +175,17 @@ def main(argv: list[str] | None = None) -> int:
                 observer=log_progress,
             )
             target = write_record(record, args.output)
+            history_target = None
+            if not args.no_history:
+                history_target = append_history(
+                    record, resolve_path(args.history_output)
+                )
             last_status = record.status
             runs += 1
             print(json.dumps(record.to_dict(), indent=2, ensure_ascii=False, default=str))
             print(f"RUN_RECORD={target}", file=sys.stderr)
+            if history_target is not None:
+                print(f"RUN_HISTORY={history_target}", file=sys.stderr)
             if record.status != "succeeded":
                 notify_failure(record)
             if not args.interval_seconds or runs >= args.max_runs:

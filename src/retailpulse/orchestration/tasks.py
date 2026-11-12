@@ -90,8 +90,11 @@ def ingest(context: TaskContext) -> Mapping[str, Any]:
             source_retrieved_at=config.source_retrieved_at,
             connection_factory=lambda: connection,
         )
+        materialized_timings: list[dict[str, Any]] = []
         materialized = (
-            refresh_ingestion_materializations(connection)
+            refresh_ingestion_materializations(
+                connection, timings=materialized_timings
+            )
             if config.refresh_materializations
             else ()
         )
@@ -104,6 +107,7 @@ def ingest(context: TaskContext) -> Mapping[str, Any]:
         "source_row_count": result.source_row_count,
         "committed_raw_row_count": result.committed_raw_row_count,
         "materialized_views": list(materialized),
+        "materialized_view_timings": materialized_timings,
         "refresh_skipped": not config.refresh_materializations,
     }
 
@@ -117,10 +121,15 @@ def sql_gates(context: TaskContext) -> Mapping[str, Any]:
         raise RuntimeError("no SQL gates found under tests/sql")
     connection = connect_from_dsn(context.dsn())
     try:
-        executed = run_sql_checks(connection, checks)
+        gate_timings: list[dict[str, Any]] = []
+        executed = run_sql_checks(connection, checks, timings=gate_timings)
     finally:
         connection.close()
-    return {"executed": list(executed), "count": len(executed)}
+    return {
+        "executed": list(executed),
+        "count": len(executed),
+        "timings": gate_timings,
+    }
 
 
 def dbt_build(context: TaskContext) -> Mapping[str, Any]:
