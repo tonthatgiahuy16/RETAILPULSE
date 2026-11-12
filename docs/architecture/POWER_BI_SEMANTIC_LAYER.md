@@ -147,3 +147,8 @@ warehouse materialized views still refresh through the normal pipeline runner;
 Power BI refresh does not run ingestion, migrations, or SQL gates. Record the
 runner output, selected source snapshot, Power BI refresh timestamp, and the
 reconciled KPI totals as separate runtime evidence.
+
+The `model-evaluation` CI job validates that persisted model metrics are
+readable through `bi.repurchase_model_evaluation`; it does not open Power BI
+Desktop, refresh the Import model, or claim that the report page was verified
+with those rows.

@@ -18,12 +18,19 @@ from retailpulse.ingestion.source_snapshot import (
 TEST_TEMP_ROOT = Path(__file__).resolve().parents[1] / ".test-tmp"
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-FIXTURE_BUILDER_SPEC = importlib.util.spec_from_file_location(
-    "build_ci_fixture", PROJECT_ROOT / "scripts" / "build_ci_fixture.py"
-)
-assert FIXTURE_BUILDER_SPEC is not None and FIXTURE_BUILDER_SPEC.loader is not None
-FIXTURE_BUILDER = importlib.util.module_from_spec(FIXTURE_BUILDER_SPEC)
-FIXTURE_BUILDER_SPEC.loader.exec_module(FIXTURE_BUILDER)
+
+def _load_script(name: str):
+    spec = importlib.util.spec_from_file_location(
+        name, PROJECT_ROOT / "scripts" / f"{name}.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+FIXTURE_BUILDER = _load_script("build_ci_fixture")
+MODEL_FIXTURE_BUILDER = _load_script("build_model_fixture")
 
 
 def project_temp_directory() -> tempfile.TemporaryDirectory[str]:
@@ -34,31 +41,35 @@ def project_temp_directory() -> tempfile.TemporaryDirectory[str]:
 
 
 class SourceSnapshotTests(unittest.TestCase):
-    def test_checked_in_ci_fixture_matches_generator(self) -> None:
-        """The committed workbook must not silently drift from its generator."""
+    def test_checked_in_ci_fixtures_match_generators(self) -> None:
+        """Committed workbooks must not silently drift from their generators."""
         from openpyxl import load_workbook
 
-        checked_in = PROJECT_ROOT / "tests" / "fixtures" / "mini_retail.xlsx"
-        with project_temp_directory() as directory:
-            generated_path = Path(directory) / "mini_retail.xlsx"
-            original_output = FIXTURE_BUILDER.OUTPUT
-            FIXTURE_BUILDER.OUTPUT = generated_path
+        def workbook_rows(path: Path) -> tuple[tuple[str, tuple[tuple[object, ...], ...]], ...]:
+            workbook = load_workbook(path, read_only=True, data_only=True)
             try:
-                FIXTURE_BUILDER.main()
+                return tuple(
+                    (sheet.title, tuple(tuple(row) for row in sheet.iter_rows(values_only=True)))
+                    for sheet in workbook.worksheets
+                )
             finally:
-                FIXTURE_BUILDER.OUTPUT = original_output
+                workbook.close()
 
-            def workbook_rows(path: Path) -> tuple[tuple[str, tuple[tuple[object, ...], ...]], ...]:
-                workbook = load_workbook(path, read_only=True, data_only=True)
-                try:
-                    return tuple(
-                        (sheet.title, tuple(tuple(row) for row in sheet.iter_rows(values_only=True)))
-                        for sheet in workbook.worksheets
-                    )
-                finally:
-                    workbook.close()
-
-            self.assertEqual(workbook_rows(checked_in), workbook_rows(generated_path))
+        for builder, filename in (
+            (FIXTURE_BUILDER, "mini_retail.xlsx"),
+            (MODEL_FIXTURE_BUILDER, "model_evaluation_retail.xlsx"),
+        ):
+            with self.subTest(filename=filename):
+                checked_in = PROJECT_ROOT / "tests" / "fixtures" / filename
+                with project_temp_directory() as directory:
+                    generated_path = Path(directory) / filename
+                    original_output = builder.OUTPUT
+                    builder.OUTPUT = generated_path
+                    try:
+                        builder.main()
+                    finally:
+                        builder.OUTPUT = original_output
+                    self.assertEqual(workbook_rows(checked_in), workbook_rows(generated_path))
 
     def test_snapshot_uses_content_hash_not_filename(self) -> None:
         payload = b"retailpulse-source-fixture\n"

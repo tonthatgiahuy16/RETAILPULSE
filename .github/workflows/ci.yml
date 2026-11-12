@@ -63,3 +63,59 @@ jobs:
         run: |
           cp dbt/profiles.example.yml dbt/profiles.yml
           dbt build --project-dir dbt --profiles-dir dbt
+
+  model-evaluation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: retailpulse_model_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d retailpulse_model_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PYTHONPATH: src
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/retailpulse_model_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install model dependencies
+        run: python -m pip install '.[model]'
+      - name: Train and persist on the synthetic model fixture
+        run: >-
+          python scripts/run_dag.py
+          --workbook tests/fixtures/model_evaluation_retail.xlsx
+          --source-uri https://example.test/retailpulse/model_evaluation_retail.xlsx
+          --source-retrieved-at 2026-11-12T00:00:00+07:00
+          --train-model
+          --model-output data/processed/ci_model_evaluation.json
+          --model-markdown-output .test-tmp/ci-model-decision.md
+          --output data/processed/orchestration/ci_model_run.json
+      - name: Validate persisted model evaluation through the BI view
+        run: >-
+          python scripts/validate_model_evaluation.py
+          --report-json data/processed/ci_model_evaluation.json
+      - name: Build the dashboard from the same training artifacts
+        run: >-
+          python scripts/build_dashboard.py
+          --eval-json data/processed/ci_model_evaluation.json
+          --run-json data/processed/orchestration/ci_model_run.json
+          --output .test-tmp/ci-model-dashboard/index.html
+      - name: Upload model evaluation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-evaluation-run
+          path: |
+            data/processed/ci_model_evaluation.json
+            data/processed/orchestration/ci_model_run.json
+            .test-tmp/ci-model-dashboard/index.html
+            .test-tmp/ci-model-decision.md

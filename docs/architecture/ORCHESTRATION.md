@@ -44,6 +44,11 @@ Optional tasks:
 python scripts/run_dag.py --workbook <path> --source-uri <uri> --source-retrieved-at <ts> --with-dbt --train-model
 ```
 
+Use `--model-output` and `--model-markdown-output` to keep generated model
+artifacts outside the tracked default paths, for example in a CI artifact
+directory. The `model-evaluation` CI job uses a synthetic fixture to exercise
+training, persistence, BI validation, and dashboard compilation.
+
 Without `--workbook`, `ingest` is skipped and the run applies migrations and
 SQL gates only. Use `--dry-run` to print the topological order without a
 database or credentials:
