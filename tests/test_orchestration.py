@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from retailpulse.orchestration import PipelineConfig, build_dag, validate_config
 from retailpulse.orchestration import tasks
@@ -221,6 +222,30 @@ class PipelineCompositionTests(unittest.TestCase):
         self.assertTrue(tasks.dbt_build(context).get("skipped"))
         self.assertTrue(tasks.train_model(context).get("skipped"))
         self.assertIn("manual_action", tasks.powerbi_refresh(context))
+
+    def test_sql_gates_task_records_per_gate_timings(self) -> None:
+        context = TaskContext(
+            config=self.config(), environ={"DATABASE_URL": "postgresql://example"}
+        )
+
+        def fake_checks(connection, checks, *, timings=None):
+            if timings is not None:
+                timings.append({"name": "a_check.sql", "elapsed_seconds": 0.25})
+            return ("a_check.sql",)
+
+        with patch(
+            "retailpulse.pipeline_runner.connect_from_dsn",
+            return_value=MagicMock(),
+        ), patch(
+            "retailpulse.pipeline_runner.run_sql_checks",
+            side_effect=fake_checks,
+        ):
+            detail = tasks.sql_gates(context)
+
+        self.assertEqual(detail["count"], 1)
+        self.assertEqual(
+            detail["timings"], [{"name": "a_check.sql", "elapsed_seconds": 0.25}]
+        )
 
     def test_powerbi_evidence_must_contain_required_fields(self) -> None:
         with project_temp_directory() as directory:

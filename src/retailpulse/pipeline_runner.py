@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 import re
+import time
 from typing import Any, Protocol
 
 
@@ -194,14 +195,32 @@ def apply_migrations(connection: Connection, migrations_dir: Path) -> MigrationR
         _release_migration_lock(connection)
 
 
-def run_sql_checks(connection: Connection, checks: Iterable[Path]) -> tuple[str, ...]:
-    """Execute read-only SQL gates and roll back their transaction afterwards."""
+def run_sql_checks(
+    connection: Connection,
+    checks: Iterable[Path],
+    *,
+    timings: list[dict[str, Any]] | None = None,
+) -> tuple[str, ...]:
+    """Execute read-only SQL gates and roll back their transaction afterwards.
+
+    When ``timings`` is provided, append one ``{name, elapsed_seconds}`` entry
+    per executed gate so callers can record per-gate latency without changing
+    the tuple return value used by existing callers.
+    """
 
     cursor = connection.cursor()
     executed: list[str] = []
     try:
         for check in sorted(checks):
+            started = time.perf_counter()
             cursor.execute(check.read_text(encoding="utf-8"))
+            if timings is not None:
+                timings.append(
+                    {
+                        "name": check.name,
+                        "elapsed_seconds": round(time.perf_counter() - started, 6),
+                    }
+                )
             executed.append(check.name)
         connection.rollback()
         return tuple(executed)
@@ -212,31 +231,42 @@ def run_sql_checks(connection: Connection, checks: Iterable[Path]) -> tuple[str,
         cursor.close()
 
 
-def refresh_ingestion_materializations(connection: Connection) -> tuple[str, ...]:
-    """Refresh derived relations whose source snapshot may have just changed."""
+def refresh_ingestion_materializations(
+    connection: Connection,
+    *,
+    timings: list[dict[str, Any]] | None = None,
+) -> tuple[str, ...]:
+    """Refresh derived relations whose source snapshot may have just changed.
+
+    When ``timings`` is provided, append one ``{name, elapsed_seconds}`` entry
+    per refreshed view.
+    """
 
     cursor = connection.cursor()
+    views = (
+        "int.eligible_sale_line",
+        "int.cancellation_line",
+        "int.cancellation_sale_candidate_snapshot",
+        "int.customer_purchase_event_snapshot",
+        "dw.dim_date",
+        "dw.dim_customer",
+        "dw.dim_product",
+        "dw.fct_sales_line",
+    )
     try:
         cursor.execute("set local max_parallel_workers_per_gather = 0")
-        cursor.execute("refresh materialized view int.eligible_sale_line")
-        cursor.execute("refresh materialized view int.cancellation_line")
-        cursor.execute("refresh materialized view int.cancellation_sale_candidate_snapshot")
-        cursor.execute("refresh materialized view int.customer_purchase_event_snapshot")
-        cursor.execute("refresh materialized view dw.dim_date")
-        cursor.execute("refresh materialized view dw.dim_customer")
-        cursor.execute("refresh materialized view dw.dim_product")
-        cursor.execute("refresh materialized view dw.fct_sales_line")
+        for view in views:
+            started = time.perf_counter()
+            cursor.execute(f"refresh materialized view {view}")
+            if timings is not None:
+                timings.append(
+                    {
+                        "name": view,
+                        "elapsed_seconds": round(time.perf_counter() - started, 6),
+                    }
+                )
         connection.commit()
-        return (
-            "int.eligible_sale_line",
-            "int.cancellation_line",
-            "int.cancellation_sale_candidate_snapshot",
-            "int.customer_purchase_event_snapshot",
-            "dw.dim_date",
-            "dw.dim_customer",
-            "dw.dim_product",
-            "dw.fct_sales_line",
-        )
+        return views
     except Exception:
         connection.rollback()
         raise

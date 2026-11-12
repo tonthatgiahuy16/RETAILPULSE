@@ -137,6 +137,25 @@ class PipelineRunnerTests(unittest.TestCase):
         self.assertEqual(connection.executed_sql, ["select 'first';", "select 'second';"])
         self.assertEqual(connection.rollback_count, 1)
 
+    def test_sql_checks_can_record_per_gate_timings(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            directory = Path(directory_name)
+            second = directory / "b_check.sql"
+            first = directory / "a_check.sql"
+            first.write_text("select 'first';", encoding="utf-8")
+            second.write_text("select 'second';", encoding="utf-8")
+            connection = FakeConnection()
+            timings: list[dict[str, Any]] = []
+
+            executed = run_sql_checks(connection, [second, first], timings=timings)
+
+        self.assertEqual(executed, ("a_check.sql", "b_check.sql"))
+        self.assertEqual([item["name"] for item in timings], ["a_check.sql", "b_check.sql"])
+        self.assertTrue(
+            all(item["elapsed_seconds"] >= 0 for item in timings),
+            timings,
+        )
+
     def test_ingestion_materialization_refresh_commits(self) -> None:
         connection = FakeConnection()
 
@@ -170,3 +189,14 @@ class PipelineRunnerTests(unittest.TestCase):
                 "refresh materialized view dw.fct_sales_line",
             ],
         )
+
+    def test_materialization_refresh_can_record_per_view_timings(self) -> None:
+        connection = FakeConnection()
+        timings: list[dict[str, Any]] = []
+
+        refresh_ingestion_materializations(connection, timings=timings)
+
+        self.assertEqual(len(timings), 8)
+        self.assertEqual(timings[0]["name"], "int.eligible_sale_line")
+        self.assertEqual(timings[-1]["name"], "dw.fct_sales_line")
+        self.assertTrue(all(item["elapsed_seconds"] >= 0 for item in timings), timings)

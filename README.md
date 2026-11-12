@@ -179,8 +179,16 @@ python scripts/run_dag.py --output data/processed/orchestration/last_run.json
 
 Add `--with-dbt` and `--train-model` to enable those optional tasks. The Power
 BI task records a manual refresh action, or verifies evidence passed with
-`--powerbi-evidence`; it never claims to refresh the report. See
-[`docs/architecture/ORCHESTRATION.md`](docs/architecture/ORCHESTRATION.md).
+`--powerbi-evidence`; it never claims to refresh the report. Each run also
+appends a compact line to `data/processed/orchestration/run_history.jsonl`
+(disable with `--no-history`, redirect with `--history-output`). Summarize
+latency across runs with:
+
+```powershell
+python scripts/report_pipeline_runs.py --last 10
+```
+
+See [`docs/architecture/ORCHESTRATION.md`](docs/architecture/ORCHESTRATION.md).
 
 Two local DAG runs on 2026-11-10 are recorded here; both are date-scoped to that
 machine and are not CI evidence.
@@ -204,8 +212,8 @@ stderr, and `--skip-refresh` skips the materialized-view refresh when the raw
 snapshot is unchanged. See
 [`docs/architecture/ORCHESTRATION.md`](docs/architecture/ORCHESTRATION.md).
 
-Power BI report verification on 2026-11-10 (developer screenshots, not CI):
-all three pages render with data and the source snapshot slicer is unpinned,
+Power BI report verification on 2026-11-11 (developer screenshots, not CI):
+all four pages render with data and the source snapshot slicer is unpinned,
 confirming the PBIP metadata fix. Migration 021 repaired a self-referential
 materialized view in the cancellation candidate path, so matched and ambiguous
 candidates are now non-zero; the diagnostic chart now shows the candidate reason.
@@ -222,8 +230,8 @@ The model is designed around one selected source snapshot. See
 [`docs/architecture/POWER_BI_SEMANTIC_LAYER.md`](docs/architecture/POWER_BI_SEMANTIC_LAYER.md)
 for least-privilege setup, metric reconciliation, and interpretation limits.
 
-The report was opened locally and its three pages were manually confirmed to
-show data on 2026-11-07. This is a local Desktop check only; no Power BI Service
+The report was opened locally and its four pages were manually confirmed to
+show data on 2026-11-11. This is a local Desktop check only; no Power BI Service
 publication, gateway configuration, scheduled refresh, or hosted availability
 is claimed.
 
@@ -235,8 +243,8 @@ python -m py_compile scripts/build_powerbi_report.py scripts/validate_powerbi_pr
 git diff --check
 ```
 
-On 2026-11-10 these checks passed locally on the Power BI-saved files
-(`POWERBI_PROJECT=PASS`, 8 BI tables, 3 report pages), and the PBIP regression
+On 2026-11-12 these checks passed locally on the Power BI-saved files
+(`POWERBI_PROJECT=PASS`, 8 BI tables, 4 report pages), and the PBIP regression
 tests in `tests/test_powerbi_project_validation.py` passed. That is local
 static evidence; it does not claim a GitHub Actions run.
 
