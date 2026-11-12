@@ -201,13 +201,15 @@ Customer ID, so `018` fact/staging equality, the `022` adjustment contract, and
 `reconciliation_data_quality` run against real rows instead of empty tables. It
 does not replace a full-snapshot ingestion.
 
-The CI DAG command does not pass `--train-model`. It installs the model
-dependencies and verifies schema-related contracts through its other checks,
-but does not provide end-to-end CI evidence that a published label dataset can
-train a model and persist rows to `mart.repurchase_model_evaluation` or
-`bi.repurchase_model_evaluation`. Model training remains an opt-in local DAG
-task; the dated local evidence above and the decision report are the relevant
-runtime evidence for that path.
+A separate `model-evaluation` CI job covers the model-to-BI path. It ingests
+`tests/fixtures/model_evaluation_retail.xlsx` (471 synthetic rows, 60 customers,
+two temporal cutoffs), runs the governed DAG with `--train-model`, persists the
+three evaluation rows, validates them through `bi.repurchase_model_evaluation`,
+and builds the dashboard from the same run and model artifacts. This proves the
+training, persistence, validation, and dashboard wiring in CI. It does not
+claim that the synthetic fixture's metrics describe the published Online Retail
+II snapshot or a production campaign; the dated local decision report remains
+the evidence for that snapshot.
 
 ## Interpretation guardrails
 

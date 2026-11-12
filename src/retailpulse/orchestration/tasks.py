@@ -160,6 +160,10 @@ def train_model(context: TaskContext) -> Mapping[str, Any]:
     ]
     if config.source_file_id is not None:
         command.extend(["--source-file-id", str(config.source_file_id)])
+    if config.model_markdown_output is not None:
+        command.extend(
+            ["--markdown-output", str(_path(config, config.model_markdown_output))]
+        )
     completed = _run(command, config)
     return {
         "returncode": completed.returncode,

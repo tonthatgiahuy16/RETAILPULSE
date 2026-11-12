@@ -38,6 +38,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--train-model", action="store_true")
     parser.add_argument("--source-file-id", type=int)
     parser.add_argument("--model-output", type=Path)
+    parser.add_argument("--model-markdown-output", type=Path)
     parser.add_argument("--powerbi-evidence", type=Path)
     parser.add_argument("--dbt-profiles-dir", type=Path)
     parser.add_argument("--dbt-executable", default="dbt")
@@ -68,6 +69,7 @@ def build_config(args: argparse.Namespace) -> PipelineConfig:
         train_model=args.train_model,
         source_file_id=args.source_file_id,
         model_output=model_output,
+        model_markdown_output=args.model_markdown_output,
         powerbi_evidence=args.powerbi_evidence,
         dbt_profiles_dir=args.dbt_profiles_dir,
         dbt_executable=args.dbt_executable,

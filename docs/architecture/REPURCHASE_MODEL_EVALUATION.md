@@ -29,6 +29,8 @@ python scripts/train_repurchase_model.py
 
 The default report is `data/processed/repurchase_model_evaluation.json`, an
 ignored local file. Use `--source-file-id` when multiple snapshots exist.
+`--markdown-output` redirects the generated decision report; the DAG exposes
+the same option as `--model-markdown-output`.
 
 ## Metrics, fixed-capacity ranking and limits
 
@@ -76,6 +78,29 @@ actual ROI.
 
 This is a historical backtest, not campaign response, causal uplift, revenue,
 profit, or ROI. Model scoring/publishing is intentionally a later slice.
+
+## CI model-path verification
+
+The `model-evaluation` GitHub Actions job is separate from the full pipeline
+fixture job. It uses the deterministic workbook
+`tests/fixtures/model_evaluation_retail.xlsx` (471 synthetic rows, 60 customers,
+two non-overlapping prediction cutoffs, and both label classes) and:
+
+1. runs `scripts/run_dag.py --train-model` against an isolated PostgreSQL
+   service, which applies migrations, ingests the fixture, runs SQL gates,
+   trains the model, and persists three evaluation rows;
+2. runs `scripts/validate_model_evaluation.py`, which checks the mart rows,
+   compares them with `bi.repurchase_model_evaluation`, and cross-checks the
+   generated report JSON;
+3. builds the dashboard from the same run record and model report;
+4. uploads the run record, model report, Markdown decision report, and dashboard
+   HTML as CI artifacts.
+
+Regenerate the fixture with `python scripts/build_model_fixture.py`; the test
+suite checks that the committed workbook matches its generator. This job proves
+the training-to-persistence-to-BI wiring and dashboard compilation. It does not
+measure model quality on Online Retail II, and its synthetic metrics must not be
+reported as published-snapshot results.
 
 ## Local runtime evidence
 

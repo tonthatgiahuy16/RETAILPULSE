@@ -22,6 +22,7 @@ class PipelineConfig:
     train_model: bool = False
     source_file_id: int | None = None
     model_output: Path = DEFAULT_MODEL_OUTPUT
+    model_markdown_output: Path | None = None
     powerbi_evidence: Path | None = None
     dbt_profiles_dir: Path | None = None
     dbt_executable: str = "dbt"
