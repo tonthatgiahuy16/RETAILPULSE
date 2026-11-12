@@ -3,6 +3,8 @@ data/raw/
 data/interim/
 data/processed/
 .env
+.env.*
+!.env.example
 AGENTS.md
 __pycache__/
 *.py[cod]
